@@ -175,14 +175,7 @@ function szamlazz_hu_download_invoice($request) {
         
         // Check if PDF was retrieved successfully
         if ($result->isSuccess()) {
-            // Set headers for PDF download
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: attachment; filename="' . $invoice_number . '.pdf"');
-            header('Cache-Control: private, max-age=0, must-revalidate');
-            header('Pragma: public');
-            
-            // Output the PDF content
-            echo $result->getPdfContent();
+            $result->downloadPdf();
             exit;
         } else {
             return new WP_Error(
@@ -233,6 +226,7 @@ add_action('fluent_cart/order_created', function($data) {
         
         // Create Számla Agent
         $agent = SzamlaAgentAPI::create($api_key);
+		$agent->setPdfFileSave(false);
         
         // Get billing address
         $billing = $order->billing_address;
@@ -241,7 +235,7 @@ add_action('fluent_cart/order_created', function($data) {
         }
         
         // Parse meta data for additional info
-        $meta = json_decode($billing->meta, true);
+        $meta = $billing->meta;
         $company_name = isset($meta['other_data']['company_name']) ? $meta['other_data']['company_name'] : '';
         
         // Create buyer
@@ -263,7 +257,7 @@ add_action('fluent_cart/order_created', function($data) {
         $invoice->setBuyer($buyer);
         
         // Set currency
-        $invoice->setCurrency($order->currency);
+        //$invoice->setCurrency($order->currency);
         
         // Get order items
         $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
@@ -274,19 +268,19 @@ add_action('fluent_cart/order_created', function($data) {
         
         // Add items to invoice
         foreach ($items as $order_item) {
-            $item = new InvoiceItem(
-                $order_item->title,
-                $order_item->quantity
-            );
-            
             // Convert amounts from cents to currency units
             $net_price = $order_item->unit_price / 100;
             $vat_amount = $order_item->tax_amount / $order_item->quantity / 100;
             $gross_amount = $order_item->line_total / 100;
             
-            $item->setNetPrice($net_price);
+            $item = new InvoiceItem(
+                $order_item->title,
+                $net_price
+            );
+            
+			$item->setNetPrice($net_price);
             $item->setVatAmount($vat_amount);
-            $item->setGrossAmount($gross_amount);
+            $item->setGrossAmount($gross_amount + $vat_amount);
             
             $invoice->addItem($item);
         }
