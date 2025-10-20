@@ -227,6 +227,8 @@ add_action('fluent_cart/order_created', function($data) {
         // Create Számla Agent
         $agent = SzamlaAgentAPI::create($api_key);
 		$agent->setPdfFileSave(false);
+        $checkout_data = FluentCart\App\Models\Cart::where('order_id', $data['order']['id'])->first()['checkout_data'];
+        $taxpayer_data = $agent->getTaxPayer($checkout_data['tax_data']['vat_number'])->getTaxPayerData();
         
         // Get billing address
         $billing = $order->billing_address;
