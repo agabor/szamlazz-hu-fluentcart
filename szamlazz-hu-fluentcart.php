@@ -330,18 +330,6 @@ add_action('fluent_cart/order_created', function($data) {
     }
 }, 10, 1);
 
-
-add_filter('fluent_cart/module_setting/fields', function($fields, $data) {
-    // Add custom module field
-    $fields[] = [
-        'key' => 'szamlazz_hu_api_hey',
-        'label' => 'Számlázz.hu API Key',
-        'type' => 'text'
-    ];
-    return $fields;
-}, 10, 2);
-
-
 add_action('init', function() {
     if (isset($_GET['fluent-cart']) && $_GET['fluent-cart'] === 'receipt') {
         // Your custom logic here
