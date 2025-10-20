@@ -226,9 +226,11 @@ add_action('fluent_cart/order_created', function($data) {
         
         // Create Számla Agent
         $agent = SzamlaAgentAPI::create($api_key);
-		$agent->setPdfFileSave(false);
+        $agent->setPdfFileSave(false);
+        
+        // Get checkout data and VAT number
         $checkout_data = FluentCart\App\Models\Cart::where('order_id', $data['order']['id'])->first()['checkout_data'];
-        $taxpayer_data = $agent->getTaxPayer($checkout_data['tax_data']['vat_number'])->getTaxPayerData();
+        $vat_number = $checkout_data['tax_data']['vat_number'] ?? null;
         
         // Get billing address
         $billing = $order->billing_address;
@@ -237,17 +239,105 @@ add_action('fluent_cart/order_created', function($data) {
         }
         
         // Parse meta data for additional info
-        $meta = $billing->meta;
-        $company_name = isset($meta['other_data']['company_name']) ? $meta['other_data']['company_name'] : '';
+        $meta = json_decode($billing->meta, true);
         
-        // Create buyer
-        $buyer_name = !empty($company_name) ? $company_name : $billing->name;
+        // Initialize buyer variables with defaults
+        $buyer_name = $billing->name;
+        $buyer_postcode = $billing->postcode;
+        $buyer_city = $billing->city;
+        $buyer_address = $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '');
+        $buyer_vat_id = null;
+        
+        // If VAT number is provided, get taxpayer data from NAV
+        if (!empty($vat_number)) {
+            try {
+                $taxpayer_response = $agent->getTaxPayer($vat_number);
+                $taxpayer_xml = $taxpayer_response->getTaxPayerData();
+                
+                if ($taxpayer_xml) {
+                    // Parse XML
+                    $xml = new \SimpleXMLElement($taxpayer_xml);
+                    
+                    // Register namespaces
+                    $xml->registerXPathNamespace('ns2', 'http://schemas.nav.gov.hu/OSA/3.0/api');
+                    $xml->registerXPathNamespace('ns3', 'http://schemas.nav.gov.hu/OSA/3.0/base');
+                    
+                    // Extract taxpayer name
+                    $taxpayer_short_name = $xml->xpath('//ns2:taxpayerShortName');
+                    $taxpayer_name = $xml->xpath('//ns2:taxpayerName');
+                    
+                    if (!empty($taxpayer_short_name)) {
+                        $buyer_name = (string)$taxpayer_short_name[0];
+                    } elseif (!empty($taxpayer_name)) {
+                        $buyer_name = (string)$taxpayer_name[0];
+                    }
+                    
+                    // Extract VAT ID components and construct full VAT ID
+                    $taxpayer_id = $xml->xpath('//ns3:taxpayerId');
+                    $vat_code = $xml->xpath('//ns3:vatCode');
+                    $county_code = $xml->xpath('//ns3:countyCode');
+                    
+                    if (!empty($taxpayer_id) && !empty($vat_code) && !empty($county_code)) {
+                        $buyer_vat_id = sprintf(
+                            '%s-%s-%s',
+                            (string)$taxpayer_id[0],
+                            (string)$vat_code[0],
+                            (string)$county_code[0]
+                        );
+                    }
+                    
+                    // Extract address from taxpayer data
+                    $postal_code = $xml->xpath('//ns3:postalCode');
+                    $city = $xml->xpath('//ns3:city');
+                    $street_name = $xml->xpath('//ns3:streetName');
+                    $public_place = $xml->xpath('//ns3:publicPlaceCategory');
+                    $number = $xml->xpath('//ns3:number');
+                    $door = $xml->xpath('//ns3:door');
+                    
+                    if (!empty($postal_code)) {
+                        $buyer_postcode = (string)$postal_code[0];
+                    }
+                    
+                    if (!empty($city)) {
+                        $buyer_city = (string)$city[0];
+                    }
+                    
+                    if (!empty($street_name)) {
+                        $address_parts = [(string)$street_name[0]];
+                        
+                        if (!empty($public_place)) {
+                            $address_parts[] = (string)$public_place[0];
+                        }
+                        
+                        if (!empty($number)) {
+                            $address_parts[] = (string)$number[0];
+                        }
+                        
+                        if (!empty($door)) {
+                            $address_parts[] = (string)$door[0];
+                        }
+                        
+                        $buyer_address = implode(' ', $address_parts);
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
+                // Continue with default billing address if taxpayer lookup fails
+            }
+        }
+        
+        // Create buyer with taxpayer data or billing address
         $buyer = new Buyer(
             $buyer_name,
-            $billing->postcode,
-            $billing->city,
-            $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '')
+            $buyer_postcode,
+            $buyer_city,
+            $buyer_address
         );
+        
+        // Set VAT ID if available
+        if (!empty($buyer_vat_id)) {
+            $buyer->setTaxNumber($buyer_vat_id);
+        }
         
         // Set buyer email if available
         if (isset($meta['other_data']['email'])) {
