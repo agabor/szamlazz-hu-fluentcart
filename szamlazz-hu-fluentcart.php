@@ -197,7 +197,7 @@ register_activation_hook(__FILE__, function() {
 add_action('admin_menu', function() {
     add_options_page(
         'Számlázz.hu FluentCart Settings',
-        'Számlázz.hu FluentCart',
+        'Számlázz.hu',
         'manage_options',
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_fluentcart_settings_page'
@@ -252,7 +252,7 @@ add_action('admin_init', function() {
         'szamlazz_hu_clear_cache_field',
         'Clear Cache',
         function() {
-            echo '<p class="description">Clearing the cache will delete all cached PDFs, XMLs, and logs. A new random folder suffix will be generated.</p>';
+            echo '<p class="description">Clearing the cache will delete all cached PDFs, XMLs, and logs.</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_cache_section'
@@ -323,7 +323,7 @@ add_action('fluent_cart/order_created', function($data) {
         $api_key = get_option('szamlazz_hu_agent_api_key', '');
         
         if (empty($api_key)) {
-            throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu FluentCart');
+            throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu');
         }
         
         $order = $data['order'];
