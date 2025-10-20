@@ -19,9 +19,42 @@ if (!defined('ABSPATH')) {
 require __DIR__ . DIRECTORY_SEPARATOR .'autoload.php';
 
 use \SzamlaAgent\SzamlaAgentAPI;
+use \SzamlaAgent\SzamlaAgentUtil;
 use \SzamlaAgent\Buyer;
 use \SzamlaAgent\Document\Invoice\Invoice;
 use \SzamlaAgent\Item\InvoiceItem;
+
+/**
+ * Initialize Szamlazz.hu base path and ensure required folders exist
+ */
+function szamlazz_hu_init_paths() {
+    // Get WordPress uploads directory
+    $upload_dir = wp_upload_dir();
+    $base_path = $upload_dir['basedir'] . DIRECTORY_SEPARATOR . 'szamlazz-hu-fluentcart';
+    
+    // Set the base path for SzamlaAgent
+    SzamlaAgentUtil::setBasePath($base_path);
+    
+    // Define required folders
+    $required_folders = [
+        'logs',
+        'pdf',
+        'xmls'
+    ];
+    
+    // Create base directory if it doesn't exist
+    if (!file_exists($base_path)) {
+        wp_mkdir_p($base_path);
+    }
+    
+    // Create required subdirectories if they don't exist
+    foreach ($required_folders as $folder) {
+        $folder_path = $base_path . DIRECTORY_SEPARATOR . $folder;
+        if (!file_exists($folder_path)) {
+            wp_mkdir_p($folder_path);
+        }
+    }
+}
 
 /**
  * Create database table on plugin activation
@@ -135,6 +168,9 @@ add_action('fluent_cart/order_created', function($data) {
     global $wpdb;
     
     try {
+        // Initialize paths and ensure folders exist
+        szamlazz_hu_init_paths();
+        
         // Get API key from settings
         $api_key = get_option('szamlazz_hu_agent_api_key', '');
         
@@ -355,6 +391,8 @@ add_action('init', function() {
         global $wpdb;
     
         try {
+            // Initialize paths and ensure folders exist
+            szamlazz_hu_init_paths();
             
             // Get API key from settings
             $api_key = get_option('szamlazz_hu_agent_api_key', '');
