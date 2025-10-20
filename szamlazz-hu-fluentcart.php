@@ -88,6 +88,19 @@ add_action('admin_init', function() {
 });
 
 /**
+ * Add settings link to plugins page
+ */
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+    $settings_link = sprintf(
+        '<a href="%s">%s</a>',
+        admin_url('options-general.php?page=szamlazz-hu-fluentcart'),
+        __('Settings', 'szamlazz-hu-fluentcart')
+    );
+    array_unshift($links, $settings_link);
+    return $links;
+});
+
+/**
  * Settings page callback
  */
 function szamlazz_hu_fluentcart_settings_page() {
