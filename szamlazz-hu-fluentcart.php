@@ -114,86 +114,6 @@ function szamlazz_hu_fluentcart_settings_page() {
     <?php
 }
 
-/**
- * Register REST API endpoint for invoice download
- */
-add_action('rest_api_init', function() {
-    register_rest_route('szamlazz-hu/v1', '/invoice/(?P<invoice_number>[a-zA-Z0-9\-]+)/download', [
-        'methods' => 'GET',
-        'callback' => 'szamlazz_hu_download_invoice',
-        'permission_callback' => '__return_true', // No authorization required yet
-        'args' => [
-            'invoice_number' => [
-                'required' => true,
-                'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field'
-            ]
-        ]
-    ]);
-});
-
-/**
- * Download invoice PDF callback
- */
-function szamlazz_hu_download_invoice($request) {
-    global $wpdb;
-    
-    try {
-        $invoice_number = $request->get_param('invoice_number');
-        
-        // Get API key from settings
-        $api_key = get_option('szamlazz_hu_agent_api_key', '');
-        
-        if (empty($api_key)) {
-            return new WP_Error(
-                'api_key_missing',
-                'Agent API Key is not configured',
-                ['status' => 500]
-            );
-        }
-        
-        // Check if invoice exists in database
-        $table_name = $wpdb->prefix . 'szamlazz_invoices';
-        $invoice_record = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE invoice_number = %s",
-            $invoice_number
-        ));
-        
-        if (!$invoice_record) {
-            return new WP_Error(
-                'invoice_not_found',
-                'Invoice not found',
-                ['status' => 404]
-            );
-        }
-        
-        // Create Számla Agent
-        $agent = SzamlaAgentAPI::create($api_key);
-        
-        // Get invoice PDF
-        $result = $agent->getInvoicePdf($invoice_number);
-        
-        // Check if PDF was retrieved successfully
-        if ($result->isSuccess()) {
-            $result->downloadPdf();
-            exit;
-        } else {
-            return new WP_Error(
-                'pdf_download_failed',
-                'Failed to download invoice PDF: ' . $result->getMessage(),
-                ['status' => 500]
-            );
-        }
-        
-    } catch (\Exception $e) {
-        error_log('Számlázz.hu download error: ' . $e->getMessage());
-        return new WP_Error(
-            'download_error',
-            'Error downloading invoice: ' . $e->getMessage(),
-            ['status' => 500]
-        );
-    }
-}
 
 /**
  * Hook into FluentCart order creation
@@ -410,42 +330,6 @@ add_action('fluent_cart/order_created', function($data) {
     }
 }, 10, 1);
 
-/**
- * Add invoice download link to order view
- */
-add_filter('fluent_cart/order/view', function($order, $data) {
-    global $wpdb;
-    
-    // Get order ID from the order array
-    $order_id = isset($order['id']) ? $order['id'] : null;
-    
-    if (!$order_id) {
-        file_put_contents('/var/www/order_view.txt', 'no order id');
-        return $order;
-    }
-    
-    // Check if invoice exists for this order
-    $table_name = $wpdb->prefix . 'szamlazz_invoices';
-    $invoice_record = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM $table_name WHERE order_id = %d",
-        $order_id
-    ));
-    
-    if ($invoice_record) {
-        // Generate download URL
-        $download_url = rest_url('szamlazz-hu/v1/invoice/' . $invoice_record->invoice_number . '/download');
-        
-        // Add invoice data to order
-        $order['invoice_number'] = $invoice_record->invoice_number;
-        $order['invoice_download_url'] = $download_url;
-        $order['invoice_created_at'] = $invoice_record->created_at;
-        file_put_contents('/var/www/order_view.txt', var_export($order, trues));
-    } else {
-        file_put_contents('/var/www/order_view.txt', 'no invoice');
-    }
-    
-    return $order;
-}, 10, 2);
 
 add_filter('fluent_cart/module_setting/fields', function($fields, $data) {
     // Add custom module field
@@ -456,3 +340,57 @@ add_filter('fluent_cart/module_setting/fields', function($fields, $data) {
     ];
     return $fields;
 }, 10, 2);
+
+
+add_action('init', function() {
+    if (isset($_GET['fluent-cart']) && $_GET['fluent-cart'] === 'receipt') {
+        // Your custom logic here
+        $order_hash = isset($_GET['order_hash']) ? sanitize_text_field($_GET['order_hash']) : '';
+        $download = isset($_GET['download']) ? sanitize_text_field($_GET['download']) : '';
+        if ($download !== '1')
+            return;
+
+        $order_id = FluentCart\App\Models\Order::where('uuid', $order_hash)->value('id');
+        global $wpdb;
+    
+        try {
+            
+            // Get API key from settings
+            $api_key = get_option('szamlazz_hu_agent_api_key', '');
+            
+            if (empty($api_key)) {
+                return;
+            }
+            
+            // Check if invoice exists in database
+            $table_name = $wpdb->prefix . 'szamlazz_invoices';
+            $invoice_record = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table_name WHERE order_id = %d",
+                $order_id
+            ));
+            
+            if ($invoice_record) {
+                
+                // Create Számla Agent
+                $agent = SzamlaAgentAPI::create($api_key);
+                
+                // Get invoice PDF
+                $result = $agent->getInvoicePdf($invoice_record->invoice_number);
+                
+                // Check if PDF was retrieved successfully
+                if ($result->isSuccess()) {
+                    $result->downloadPdf();
+                    exit;
+                }
+            }
+            
+        } catch (\Exception $e) {
+            error_log('Számlázz.hu download error: ' . $e->getMessage());
+            return new WP_Error(
+                'download_error',
+                'Error downloading invoice: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+}, 1);
