@@ -239,7 +239,7 @@ add_action('fluent_cart/order_created', function($data) {
         }
         
         // Parse meta data for additional info
-        $meta = json_decode($billing->meta, true);
+        $meta = $billing->meta;
         
         // Initialize buyer variables with defaults
         $buyer_name = $billing->name;
