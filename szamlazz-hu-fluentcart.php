@@ -386,11 +386,7 @@ add_action('init', function() {
             
         } catch (\Exception $e) {
             error_log('Számlázz.hu download error: ' . $e->getMessage());
-            return new WP_Error(
-                'download_error',
-                'Error downloading invoice: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            return;
         }
     }
 }, 1);
