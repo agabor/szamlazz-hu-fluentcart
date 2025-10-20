@@ -28,9 +28,16 @@ use \SzamlaAgent\Item\InvoiceItem;
  * Initialize Szamlazz.hu base path and ensure required folders exist
  */
 function szamlazz_hu_init_paths() {
-    // Get WordPress uploads directory
-    $upload_dir = wp_upload_dir();
-    $base_path = $upload_dir['basedir'] . DIRECTORY_SEPARATOR . 'szamlazz-hu-fluentcart';
+    // Get or generate a random 8-character suffix
+    $suffix = get_option('szamlazz_hu_folder_suffix', '');
+    if (empty($suffix)) {
+        $suffix = substr(bin2hex(random_bytes(4)), 0, 8);
+        update_option('szamlazz_hu_folder_suffix', $suffix);
+    }
+    
+    // Use WordPress cache directory
+    $cache_dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'cache';
+    $base_path = $cache_dir . DIRECTORY_SEPARATOR . 'szamlazz-hu-fluentcart-' . $suffix;
     
     // Set the base path for SzamlaAgent
     SzamlaAgentUtil::setBasePath($base_path);
@@ -41,6 +48,11 @@ function szamlazz_hu_init_paths() {
         'pdf',
         'xmls'
     ];
+    
+    // Create cache directory if it doesn't exist
+    if (!file_exists($cache_dir)) {
+        wp_mkdir_p($cache_dir);
+    }
     
     // Create base directory if it doesn't exist
     if (!file_exists($base_path)) {
@@ -54,6 +66,106 @@ function szamlazz_hu_init_paths() {
             wp_mkdir_p($folder_path);
         }
     }
+}
+
+/**
+ * Get the cache directory path
+ */
+function szamlazz_hu_get_cache_path() {
+    $suffix = get_option('szamlazz_hu_folder_suffix', '');
+    if (empty($suffix)) {
+        return null;
+    }
+    
+    $cache_dir = WP_CONTENT_DIR . DIRECTORY_SEPARATOR . 'cache';
+    return $cache_dir . DIRECTORY_SEPARATOR . 'szamlazz-hu-fluentcart-' . $suffix;
+}
+
+/**
+ * Get the cache directory size in bytes
+ */
+function szamlazz_hu_get_cache_size() {
+    $cache_path = szamlazz_hu_get_cache_path();
+    if (!$cache_path || !file_exists($cache_path)) {
+        return 0;
+    }
+    
+    $size = 0;
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($cache_path, RecursiveDirectoryIterator::SKIP_DOTS)
+    );
+    
+    foreach ($iterator as $file) {
+        if ($file->isFile()) {
+            $size += $file->getSize();
+        }
+    }
+    
+    return $size;
+}
+
+/**
+ * Format bytes to human-readable size
+ */
+function szamlazz_hu_format_bytes($bytes, $precision = 2) {
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    
+    for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+        $bytes /= 1024;
+    }
+    
+    return round($bytes, $precision) . ' ' . $units[$i];
+}
+
+/**
+ * Clear the cache directory
+ */
+function szamlazz_hu_clear_cache() {
+    $cache_path = szamlazz_hu_get_cache_path();
+    
+    if ($cache_path && file_exists($cache_path)) {
+        // Recursively delete all files and folders
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($cache_path, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                rmdir($file->getPathname());
+            } else {
+                unlink($file->getPathname());
+            }
+        }
+        
+        // Remove the main directory
+        rmdir($cache_path);
+    }
+    
+    // Delete the suffix option to regenerate a new one
+    delete_option('szamlazz_hu_folder_suffix');
+}
+
+/**
+ * Get PDF file path for invoice number
+ */
+function szamlazz_hu_get_pdf_path($invoice_number) {
+    $cache_path = szamlazz_hu_get_cache_path();
+    if (!$cache_path) {
+        return null;
+    }
+    
+    $pdf_dir = $cache_path . DIRECTORY_SEPARATOR . 'pdf';
+    
+    // Search for PDF files matching the invoice number
+    if (file_exists($pdf_dir)) {
+        $files = glob($pdf_dir . DIRECTORY_SEPARATOR . '*' . $invoice_number . '*.pdf');
+        if (!empty($files)) {
+            return $files[0]; // Return the first matching file
+        }
+    }
+    
+    return null;
 }
 
 /**
@@ -98,6 +210,12 @@ add_action('admin_menu', function() {
 add_action('admin_init', function() {
     register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_agent_api_key');
     
+    // Handle clear cache action
+    if (isset($_POST['szamlazz_hu_clear_cache']) && check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
+        szamlazz_hu_clear_cache();
+        add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', 'Cache cleared successfully', 'updated');
+    }
+    
     add_settings_section(
         'szamlazz_hu_api_section',
         'API Settings',
@@ -117,6 +235,27 @@ add_action('admin_init', function() {
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_api_section'
+    );
+    
+    add_settings_section(
+        'szamlazz_hu_cache_section',
+        'Cache Management',
+        function() {
+            $cache_size = szamlazz_hu_get_cache_size();
+            $formatted_size = szamlazz_hu_format_bytes($cache_size);
+            echo '<p>Current cache size: <strong>' . esc_html($formatted_size) . '</strong></p>';
+        },
+        'szamlazz-hu-fluentcart'
+    );
+    
+    add_settings_field(
+        'szamlazz_hu_clear_cache_field',
+        'Clear Cache',
+        function() {
+            echo '<p class="description">Clearing the cache will delete all cached PDFs, XMLs, and logs. A new random folder suffix will be generated.</p>';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_cache_section'
     );
 });
 
@@ -149,12 +288,21 @@ function szamlazz_hu_fluentcart_settings_page() {
     ?>
     <div class="wrap">
         <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        
+        <!-- API Settings Form -->
         <form action="options.php" method="post">
             <?php
             settings_fields('szamlazz_hu_fluentcart_settings');
             do_settings_sections('szamlazz-hu-fluentcart');
             submit_button('Save Settings');
             ?>
+        </form>
+        
+        <!-- Clear Cache Form -->
+        <form action="<?php echo esc_url(admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
+            <?php wp_nonce_field('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce'); ?>
+            <input type="hidden" name="szamlazz_hu_clear_cache" value="1" />
+            <?php submit_button('Clear Cache', 'secondary', 'submit', false); ?>
         </form>
     </div>
     <?php
@@ -409,9 +557,21 @@ add_action('init', function() {
             ));
             
             if ($invoice_record) {
+                // Check if PDF exists in cache
+                $cached_pdf_path = szamlazz_hu_get_pdf_path($invoice_record->invoice_number);
                 
-                // Create Számla Agent
+                if ($cached_pdf_path && file_exists($cached_pdf_path)) {
+                    // Serve from cache
+                    header('Content-Type: application/pdf');
+                    header('Content-Disposition: attachment; filename="' . basename($cached_pdf_path) . '"');
+                    header('Content-Length: ' . filesize($cached_pdf_path));
+                    readfile($cached_pdf_path);
+                    exit;
+                }
+                
+                // PDF not in cache, fetch from API
                 $agent = SzamlaAgentAPI::create($api_key);
+                $agent->setPdfFileSave(true); // Enable saving to cache
                 
                 // Get invoice PDF
                 $result = $agent->getInvoicePdf($invoice_record->invoice_number);
