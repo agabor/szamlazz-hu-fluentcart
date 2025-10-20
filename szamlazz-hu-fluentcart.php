@@ -115,6 +115,94 @@ function szamlazz_hu_fluentcart_settings_page() {
 }
 
 /**
+ * Register REST API endpoint for invoice download
+ */
+add_action('rest_api_init', function() {
+    register_rest_route('szamlazz-hu/v1', '/invoice/(?P<invoice_number>[a-zA-Z0-9\-]+)/download', [
+        'methods' => 'GET',
+        'callback' => 'szamlazz_hu_download_invoice',
+        'permission_callback' => '__return_true', // No authorization required yet
+        'args' => [
+            'invoice_number' => [
+                'required' => true,
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_text_field'
+            ]
+        ]
+    ]);
+});
+
+/**
+ * Download invoice PDF callback
+ */
+function szamlazz_hu_download_invoice($request) {
+    global $wpdb;
+    
+    try {
+        $invoice_number = $request->get_param('invoice_number');
+        
+        // Get API key from settings
+        $api_key = get_option('szamlazz_hu_agent_api_key', '');
+        
+        if (empty($api_key)) {
+            return new WP_Error(
+                'api_key_missing',
+                'Agent API Key is not configured',
+                ['status' => 500]
+            );
+        }
+        
+        // Check if invoice exists in database
+        $table_name = $wpdb->prefix . 'szamlazz_invoices';
+        $invoice_record = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE invoice_number = %s",
+            $invoice_number
+        ));
+        
+        if (!$invoice_record) {
+            return new WP_Error(
+                'invoice_not_found',
+                'Invoice not found',
+                ['status' => 404]
+            );
+        }
+        
+        // Create Számla Agent
+        $agent = SzamlaAgentAPI::create($api_key);
+        
+        // Get invoice PDF
+        $result = $agent->getInvoicePdf($invoice_number);
+        
+        // Check if PDF was retrieved successfully
+        if ($result->isSuccess()) {
+            // Set headers for PDF download
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $invoice_number . '.pdf"');
+            header('Cache-Control: private, max-age=0, must-revalidate');
+            header('Pragma: public');
+            
+            // Output the PDF content
+            echo $result->getPdfContent();
+            exit;
+        } else {
+            return new WP_Error(
+                'pdf_download_failed',
+                'Failed to download invoice PDF: ' . $result->getMessage(),
+                ['status' => 500]
+            );
+        }
+        
+    } catch (\Exception $e) {
+        error_log('Számlázz.hu download error: ' . $e->getMessage());
+        return new WP_Error(
+            'download_error',
+            'Error downloading invoice: ' . $e->getMessage(),
+            ['status' => 500]
+        );
+    }
+}
+
+/**
  * Hook into FluentCart order creation
  */
 add_action('fluent_cart/order_created', function($data) {
