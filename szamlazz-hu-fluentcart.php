@@ -409,3 +409,50 @@ add_action('fluent_cart/order_created', function($data) {
         error_log('Számlázz.hu error for order ' . ($order_id ?? 'unknown') . ': ' . $e->getMessage());
     }
 }, 10, 1);
+
+/**
+ * Add invoice download link to order view
+ */
+add_filter('fluent_cart/order/view', function($order, $data) {
+    global $wpdb;
+    
+    // Get order ID from the order array
+    $order_id = isset($order['id']) ? $order['id'] : null;
+    
+    if (!$order_id) {
+        file_put_contents('/var/www/order_view.txt', 'no order id');
+        return $order;
+    }
+    
+    // Check if invoice exists for this order
+    $table_name = $wpdb->prefix . 'szamlazz_invoices';
+    $invoice_record = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE order_id = %d",
+        $order_id
+    ));
+    
+    if ($invoice_record) {
+        // Generate download URL
+        $download_url = rest_url('szamlazz-hu/v1/invoice/' . $invoice_record->invoice_number . '/download');
+        
+        // Add invoice data to order
+        $order['invoice_number'] = $invoice_record->invoice_number;
+        $order['invoice_download_url'] = $download_url;
+        $order['invoice_created_at'] = $invoice_record->created_at;
+        file_put_contents('/var/www/order_view.txt', var_export($order, trues));
+    } else {
+        file_put_contents('/var/www/order_view.txt', 'no invoice');
+    }
+    
+    return $order;
+}, 10, 2);
+
+add_filter('fluent_cart/module_setting/fields', function($fields, $data) {
+    // Add custom module field
+    $fields[] = [
+        'key' => 'szamlazz_hu_api_hey',
+        'label' => 'Számlázz.hu API Key',
+        'type' => 'text'
+    ];
+    return $fields;
+}, 10, 2);
