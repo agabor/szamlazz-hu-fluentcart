@@ -309,10 +309,17 @@ function szamlazz_hu_fluentcart_settings_page() {
 }
 
 
-/**
- * Hook into FluentCart order creation
- */
-add_action('fluent_cart/order_created', function($data) {
+add_action('fluent_cart/order_paid_done', function($data) {
+    $order = $data['order'];
+    create_invoice($order);
+}, 10, 1);
+
+add_action('fluent_cart/payment_status_changed_to_paid', function($data) {
+    $order = $data['order'];
+    create_invoice($order);
+}, 10, 1);
+
+function create_invoice($order) {
     global $wpdb;
     
     try {
@@ -326,7 +333,6 @@ add_action('fluent_cart/order_created', function($data) {
             throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu');
         }
         
-        $order = $data['order'];
         $order_id = $order->id;
         
         // Check if invoice already exists for this order
@@ -525,7 +531,7 @@ add_action('fluent_cart/order_created', function($data) {
         file_put_contents('/var/www/error.txt', var_export($e, true));
         error_log('Számlázz.hu error for order ' . ($order_id ?? 'unknown') . ': ' . $e->getMessage());
     }
-}, 10, 1);
+}
 
 add_action('init', function() {
     if (isset($_GET['fluent-cart']) && $_GET['fluent-cart'] === 'receipt') {
