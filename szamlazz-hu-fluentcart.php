@@ -470,9 +470,8 @@ function create_invoice($order) {
         // Create invoice
         $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
         $invoice->setBuyer($buyer);
+        $invoice->getHeader()->setCurrency($order->currency);
         
-        // Set currency
-        //$invoice->setCurrency($order->currency);
         
         // Get order items
         $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
