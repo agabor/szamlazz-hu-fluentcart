@@ -505,9 +505,10 @@ function create_invoice($order) {
                 $net_price
             );
             
-			$item->setNetPrice($net_price);
-            $item->setVatAmount($vat_amount);
-            $item->setGrossAmount($gross_amount + $vat_amount);
+			$item->setNetPrice($order_item->unit_price / 100);
+            $item->setVat($order_item->line_meta->tax_config->rates[0]->rate);
+            $item->setVatAmount($order_item->tax_amount / $order_item->quantity / 100);
+            $item->setGrossAmount($order_item->line_total / 100);
             
             $invoice->addItem($item);
         }
