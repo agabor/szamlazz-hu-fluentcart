@@ -21,6 +21,7 @@ require __DIR__ . DIRECTORY_SEPARATOR .'autoload.php';
 use \SzamlaAgent\SzamlaAgentAPI;
 use \SzamlaAgent\SzamlaAgentUtil;
 use \SzamlaAgent\Buyer;
+use \SzamlaAgent\Seller;
 use \SzamlaAgent\Document\Invoice\Invoice;
 use \SzamlaAgent\Item\InvoiceItem;
 
@@ -467,9 +468,19 @@ function create_invoice($order) {
             $buyer->setEmail($meta['other_data']['email']);
         }
         
+        // Create seller with email settings
+        $seller = new Seller();
+        
+        // Configure email settings
+        // You can customize these values or make them configurable via WordPress options
+        $seller->setEmailReplyTo(get_option('admin_email')); // Use WordPress admin email as reply-to
+        $seller->setEmailSubject('Invoice for order #' . $order_id);
+        $seller->setEmailContent('Thank you for your order. Please find your invoice attached.');
+        
         // Create invoice
         $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
         $invoice->setBuyer($buyer);
+        $invoice->setSeller($seller);
         $invoice->getHeader()->setCurrency($order->currency);
         
         
