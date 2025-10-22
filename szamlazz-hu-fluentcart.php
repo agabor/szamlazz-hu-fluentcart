@@ -25,6 +25,8 @@ use \SzamlaAgent\Seller;
 use \SzamlaAgent\Document\Invoice\Invoice;
 use \SzamlaAgent\Item\InvoiceItem;
 
+use FluentCart\App\Models\Activity;
+
 /**
  * Initialize Szamlazz.hu base path and ensure required folders exist
  */
@@ -539,7 +541,7 @@ function create_invoice($order) {
                 'module_type' => 'FluentCart\App\Models\Order',
                 'module_id' => $order_id,
                 'module_name' => 'order',
-                'title' => 'Számlázz.hu invoice successfully generated'
+                'title' => 'Számlázz.hu invoice successfully generated',
                 'content' => $note
             ]);
         } else {
@@ -555,7 +557,7 @@ function create_invoice($order) {
             'module_type' => 'FluentCart\App\Models\Order',
             'module_id' => $order_id,
             'module_name' => 'order',
-            'title' => 'Számlázz.hu invoice generation failed'
+            'title' => 'Számlázz.hu invoice generation failed',
             'content' => $e->getMessage()
         ]);
     }
