@@ -495,20 +495,18 @@ function create_invoice($order) {
         
         // Add items to invoice
         foreach ($items as $order_item) {
-            // Convert amounts from cents to currency units
-            $net_price = $order_item->unit_price / 100;
-            $vat_amount = $order_item->tax_amount / $order_item->quantity / 100;
-            $gross_amount = $order_item->line_total / 100;
             
             $item = new InvoiceItem(
                 $order_item->title,
-                $net_price
+                $order_item->unit_price / 100,
+				$order_item->quantity,
+				'db',
+				$order_item->line_meta['tax_config']['rates'][0]['rate']
             );
             
-			$item->setNetPrice($order_item->unit_price / 100);
-            $item->setVat($order_item->line_meta->tax_config->rates[0]->rate);
-            $item->setVatAmount($order_item->tax_amount / $order_item->quantity / 100);
-            $item->setGrossAmount($order_item->line_total / 100);
+			$item->setNetPrice($order_item->line_total / 100);
+            $item->setVatAmount($order_item->tax_amount / 100);
+            $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
             
             $invoice->addItem($item);
         }
