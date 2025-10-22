@@ -533,6 +533,15 @@ function create_invoice($order) {
                 'Számlázz.hu invoice created: %s',
                 $invoice_number
             );
+            Activity::create([
+                'status' => 'success',
+                'log_type' => 'activity',
+                'module_type' => 'FluentCart\App\Models\Order',
+                'module_id' => $order_id,
+                'module_name' => 'order',
+                'title' => 'Számlázz.hu invoice successfully generated'
+                'content' => $note
+            ]);
         } else {
             throw new \Exception('Failed to generate invoice: ' . $result->getMessage());
         }
@@ -540,6 +549,15 @@ function create_invoice($order) {
     } catch (\Exception $e) {
         file_put_contents('/var/www/error.txt', var_export($e, true));
         error_log('Számlázz.hu error for order ' . ($order_id ?? 'unknown') . ': ' . $e->getMessage());
+        Activity::create([
+            'status' => 'failed',
+            'log_type' => 'activity',
+            'module_type' => 'FluentCart\App\Models\Order',
+            'module_id' => $order_id,
+            'module_name' => 'order',
+            'title' => 'Számlázz.hu invoice generation failed'
+            'content' => $e->getMessage()
+        ]);
     }
 }
 
