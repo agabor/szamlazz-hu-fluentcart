@@ -492,16 +492,20 @@ function create_invoice($order) {
         if ($items->isEmpty()) {
             throw new \Exception("No items found for order $order_id");
         }
-        
-        // Add items to invoice
+		
         foreach ($items as $order_item) {
+			
+			$taxRate = "0";
+			if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
+				$taxRate = $order_item->line_meta['tax_config']['rates'][0]['rate'];
+			}
             
             $item = new InvoiceItem(
                 $order_item->title,
                 $order_item->unit_price / 100,
 				$order_item->quantity,
 				'db',
-				$order_item->line_meta['tax_config']['rates'][0]['rate']
+				$taxRate
             );
             
 			$item->setNetPrice($order_item->line_total / 100);
