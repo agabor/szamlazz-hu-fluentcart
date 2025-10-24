@@ -566,6 +566,11 @@ function create_invoice($order) {
     }
 }
 
+add_action('fluent_cart/subscription_renewed', function($data) {
+    $order = $data['main_order'];
+    create_invoice($order);
+}, 10, 1);
+
 add_action('init', function() {
     if (isset($_GET['fluent-cart']) && $_GET['fluent-cart'] === 'receipt') {
         // Your custom logic here
