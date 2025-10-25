@@ -322,29 +322,284 @@ add_action('fluent_cart/payment_status_changed_to_paid', function($data) {
     create_invoice($order);
 }, 10, 1);
 
-function create_invoice($order) {
+/**
+ * Check if an invoice already exists for the given order
+ */
+function szamlazz_hu_check_existing_invoice($order_id) {
     global $wpdb;
+    $table_name = $wpdb->prefix . 'szamlazz_invoices';
+    
+    return $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE order_id = %d",
+        $order_id
+    ));
+}
+
+/**
+ * Get and validate API key from settings
+ */
+function szamlazz_hu_get_api_key() {
+    $api_key = get_option('szamlazz_hu_agent_api_key', '');
+    
+    if (empty($api_key)) {
+        throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu');
+    }
+    
+    return $api_key;
+}
+
+/**
+ * Get VAT number from checkout data
+ */
+function szamlazz_hu_get_vat_number($order_id) {
+    $checkout_data = FluentCart\App\Models\Cart::where('order_id', $order_id)->first()['checkout_data'];
+    return $checkout_data['tax_data']['vat_number'] ?? null;
+}
+
+/**
+ * Fetch and parse taxpayer data from NAV
+ */
+function szamlazz_hu_get_taxpayer_data($agent, $vat_number) {
+    try {
+        $taxpayer_response = $agent->getTaxPayer($vat_number);
+        $taxpayer_xml = $taxpayer_response->getTaxPayerData();
+        
+        if (!$taxpayer_xml) {
+            return null;
+        }
+        
+        $xml = new \SimpleXMLElement($taxpayer_xml);
+        
+        // Register namespaces
+        $xml->registerXPathNamespace('ns2', 'http://schemas.nav.gov.hu/OSA/3.0/api');
+        $xml->registerXPathNamespace('ns3', 'http://schemas.nav.gov.hu/OSA/3.0/base');
+        
+        $data = [];
+        
+        // Extract taxpayer name
+        $taxpayer_short_name = $xml->xpath('//ns2:taxpayerShortName');
+        $taxpayer_name = $xml->xpath('//ns2:taxpayerName');
+        
+        if (!empty($taxpayer_short_name)) {
+            $data['name'] = (string)$taxpayer_short_name[0];
+        } elseif (!empty($taxpayer_name)) {
+            $data['name'] = (string)$taxpayer_name[0];
+        }
+        
+        // Extract VAT ID components
+        $taxpayer_id = $xml->xpath('//ns3:taxpayerId');
+        $vat_code = $xml->xpath('//ns3:vatCode');
+        $county_code = $xml->xpath('//ns3:countyCode');
+        
+        if (!empty($taxpayer_id) && !empty($vat_code) && !empty($county_code)) {
+            $data['vat_id'] = sprintf(
+                '%s-%s-%s',
+                (string)$taxpayer_id[0],
+                (string)$vat_code[0],
+                (string)$county_code[0]
+            );
+        }
+        
+        // Extract address
+        $postal_code = $xml->xpath('//ns3:postalCode');
+        $city = $xml->xpath('//ns3:city');
+        $street_name = $xml->xpath('//ns3:streetName');
+        $public_place = $xml->xpath('//ns3:publicPlaceCategory');
+        $number = $xml->xpath('//ns3:number');
+        $door = $xml->xpath('//ns3:door');
+        
+        if (!empty($postal_code)) {
+            $data['postcode'] = (string)$postal_code[0];
+        }
+        
+        if (!empty($city)) {
+            $data['city'] = (string)$city[0];
+        }
+        
+        if (!empty($street_name)) {
+            $address_parts = [(string)$street_name[0]];
+            
+            if (!empty($public_place)) {
+                $address_parts[] = (string)$public_place[0];
+            }
+            
+            if (!empty($number)) {
+                $address_parts[] = (string)$number[0];
+            }
+            
+            if (!empty($door)) {
+                $address_parts[] = (string)$door[0];
+            }
+            
+            $data['address'] = implode(' ', $address_parts);
+        }
+        
+        return $data;
+        
+    } catch (\Exception $e) {
+        error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Create buyer object from order data
+ */
+function szamlazz_hu_create_buyer($order, $agent, $vat_number = null) {
+    $order_id = $order->id;
+    
+    // Get billing address
+    $billing = $order->billing_address;
+    if (!$billing) {
+        throw new \Exception("No billing address found for order $order_id");
+    }
+    
+    // Initialize with billing address defaults
+    $buyer_name = $billing->name;
+    $buyer_postcode = $billing->postcode;
+    $buyer_city = $billing->city;
+    $buyer_address = $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '');
+    $buyer_vat_id = null;
+    
+    // If VAT number is provided, try to get taxpayer data from NAV
+    if (!empty($vat_number)) {
+        $taxpayer_data = szamlazz_hu_get_taxpayer_data($agent, $vat_number);
+        
+        if ($taxpayer_data) {
+            if (isset($taxpayer_data['name'])) {
+                $buyer_name = $taxpayer_data['name'];
+            }
+            if (isset($taxpayer_data['vat_id'])) {
+                $buyer_vat_id = $taxpayer_data['vat_id'];
+            }
+            if (isset($taxpayer_data['postcode'])) {
+                $buyer_postcode = $taxpayer_data['postcode'];
+            }
+            if (isset($taxpayer_data['city'])) {
+                $buyer_city = $taxpayer_data['city'];
+            }
+            if (isset($taxpayer_data['address'])) {
+                $buyer_address = $taxpayer_data['address'];
+            }
+        }
+    }
+    
+    // Create buyer
+    $buyer = new Buyer(
+        $buyer_name,
+        $buyer_postcode,
+        $buyer_city,
+        $buyer_address
+    );
+    
+    // Set VAT ID if available
+    if (!empty($buyer_vat_id)) {
+        $buyer->setTaxNumber($buyer_vat_id);
+    }
+    
+    // Set buyer email if available
+    $meta = $billing->meta;
+    if (isset($meta['other_data']['email'])) {
+        $buyer->setEmail($meta['other_data']['email']);
+    }
+    
+    return $buyer;
+}
+
+/**
+ * Create seller object with email settings
+ */
+function szamlazz_hu_create_seller($order_id) {
+    $seller = new Seller();
+    
+    // Configure email settings
+    $seller->setEmailReplyTo(get_option('admin_email'));
+    $seller->setEmailSubject('Invoice for order #' . $order_id);
+    $seller->setEmailContent('Thank you for your order. Please find your invoice attached.');
+    
+    return $seller;
+}
+
+/**
+ * Add order items to invoice
+ */
+function szamlazz_hu_add_order_items($invoice, $order_id) {
+    $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
+    
+    if ($items->isEmpty()) {
+        throw new \Exception("No items found for order $order_id");
+    }
+    
+    foreach ($items as $order_item) {
+        $taxRate = "0";
+        if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
+            $taxRate = $order_item->line_meta['tax_config']['rates'][0]['rate'];
+        }
+        
+        $item = new InvoiceItem(
+            $order_item->title,
+            $order_item->unit_price / 100,
+            $order_item->quantity,
+            'db',
+            $taxRate
+        );
+        
+        $item->setNetPrice($order_item->line_total / 100);
+        $item->setVatAmount($order_item->tax_amount / 100);
+        $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
+        
+        $invoice->addItem($item);
+    }
+}
+
+/**
+ * Save invoice data to database
+ */
+function szamlazz_hu_save_invoice($order_id, $result) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'szamlazz_invoices';
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'order_id' => $order_id,
+            'invoice_number' => $result->getDocumentNumber(),
+            'invoice_id' => $result->getDataObj()->invoiceId ?? null
+        ],
+        ['%d', '%s', '%s']
+    );
+}
+
+/**
+ * Log invoice activity
+ */
+function szamlazz_hu_log_activity($order_id, $success, $message) {
+    Activity::create([
+        'status' => $success ? 'success' : 'failed',
+        'log_type' => 'activity',
+        'module_type' => 'FluentCart\App\Models\Order',
+        'module_id' => $order_id,
+        'module_name' => 'order',
+        'title' => $success ? 'Számlázz.hu invoice successfully generated' : 'Számlázz.hu invoice generation failed',
+        'content' => $message
+    ]);
+}
+
+/**
+ * Main invoice creation function
+ */
+function create_invoice($order) {
+    $order_id = $order->id;
     
     try {
         // Initialize paths and ensure folders exist
         szamlazz_hu_init_paths();
         
-        // Get API key from settings
-        $api_key = get_option('szamlazz_hu_agent_api_key', '');
+        // Get and validate API key
+        $api_key = szamlazz_hu_get_api_key();
         
-        if (empty($api_key)) {
-            throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu');
-        }
-        
-        $order_id = $order->id;
-        
-        // Check if invoice already exists for this order
-        $table_name = $wpdb->prefix . 'szamlazz_invoices';
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE order_id = %d",
-            $order_id
-        ));
-        
+        // Check if invoice already exists
+        $existing = szamlazz_hu_check_existing_invoice($order_id);
         if ($existing) {
             error_log("Invoice already exists for order $order_id: {$existing->invoice_number}");
             return;
@@ -354,130 +609,14 @@ function create_invoice($order) {
         $agent = SzamlaAgentAPI::create($api_key);
         $agent->setPdfFileSave(false);
         
-        // Get checkout data and VAT number
-        $checkout_data = FluentCart\App\Models\Cart::where('order_id', $data['order']['id'])->first()['checkout_data'];
-        $vat_number = $checkout_data['tax_data']['vat_number'] ?? null;
+        // Get VAT number from checkout data
+        $vat_number = szamlazz_hu_get_vat_number($order_id);
         
-        // Get billing address
-        $billing = $order->billing_address;
-        if (!$billing) {
-            throw new \Exception("No billing address found for order $order_id");
-        }
-        
-        // Parse meta data for additional info
-        $meta = $billing->meta;
-        
-        // Initialize buyer variables with defaults
-        $buyer_name = $billing->name;
-        $buyer_postcode = $billing->postcode;
-        $buyer_city = $billing->city;
-        $buyer_address = $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '');
-        $buyer_vat_id = null;
-        
-        // If VAT number is provided, get taxpayer data from NAV
-        if (!empty($vat_number)) {
-            try {
-                $taxpayer_response = $agent->getTaxPayer($vat_number);
-                $taxpayer_xml = $taxpayer_response->getTaxPayerData();
-                
-                if ($taxpayer_xml) {
-                    // Parse XML
-                    $xml = new \SimpleXMLElement($taxpayer_xml);
-                    
-                    // Register namespaces
-                    $xml->registerXPathNamespace('ns2', 'http://schemas.nav.gov.hu/OSA/3.0/api');
-                    $xml->registerXPathNamespace('ns3', 'http://schemas.nav.gov.hu/OSA/3.0/base');
-                    
-                    // Extract taxpayer name
-                    $taxpayer_short_name = $xml->xpath('//ns2:taxpayerShortName');
-                    $taxpayer_name = $xml->xpath('//ns2:taxpayerName');
-                    
-                    if (!empty($taxpayer_short_name)) {
-                        $buyer_name = (string)$taxpayer_short_name[0];
-                    } elseif (!empty($taxpayer_name)) {
-                        $buyer_name = (string)$taxpayer_name[0];
-                    }
-                    
-                    // Extract VAT ID components and construct full VAT ID
-                    $taxpayer_id = $xml->xpath('//ns3:taxpayerId');
-                    $vat_code = $xml->xpath('//ns3:vatCode');
-                    $county_code = $xml->xpath('//ns3:countyCode');
-                    
-                    if (!empty($taxpayer_id) && !empty($vat_code) && !empty($county_code)) {
-                        $buyer_vat_id = sprintf(
-                            '%s-%s-%s',
-                            (string)$taxpayer_id[0],
-                            (string)$vat_code[0],
-                            (string)$county_code[0]
-                        );
-                    }
-                    
-                    // Extract address from taxpayer data
-                    $postal_code = $xml->xpath('//ns3:postalCode');
-                    $city = $xml->xpath('//ns3:city');
-                    $street_name = $xml->xpath('//ns3:streetName');
-                    $public_place = $xml->xpath('//ns3:publicPlaceCategory');
-                    $number = $xml->xpath('//ns3:number');
-                    $door = $xml->xpath('//ns3:door');
-                    
-                    if (!empty($postal_code)) {
-                        $buyer_postcode = (string)$postal_code[0];
-                    }
-                    
-                    if (!empty($city)) {
-                        $buyer_city = (string)$city[0];
-                    }
-                    
-                    if (!empty($street_name)) {
-                        $address_parts = [(string)$street_name[0]];
-                        
-                        if (!empty($public_place)) {
-                            $address_parts[] = (string)$public_place[0];
-                        }
-                        
-                        if (!empty($number)) {
-                            $address_parts[] = (string)$number[0];
-                        }
-                        
-                        if (!empty($door)) {
-                            $address_parts[] = (string)$door[0];
-                        }
-                        
-                        $buyer_address = implode(' ', $address_parts);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
-                // Continue with default billing address if taxpayer lookup fails
-            }
-        }
-        
-        // Create buyer with taxpayer data or billing address
-        $buyer = new Buyer(
-            $buyer_name,
-            $buyer_postcode,
-            $buyer_city,
-            $buyer_address
-        );
-        
-        // Set VAT ID if available
-        if (!empty($buyer_vat_id)) {
-            $buyer->setTaxNumber($buyer_vat_id);
-        }
-        
-        // Set buyer email if available
-        if (isset($meta['other_data']['email'])) {
-            $buyer->setEmail($meta['other_data']['email']);
-        }
+        // Create buyer with taxpayer data if available
+        $buyer = szamlazz_hu_create_buyer($order, $agent, $vat_number);
         
         // Create seller with email settings
-        $seller = new Seller();
-        
-        // Configure email settings
-        // You can customize these values or make them configurable via WordPress options
-        $seller->setEmailReplyTo(get_option('admin_email')); // Use WordPress admin email as reply-to
-        $seller->setEmailSubject('Invoice for order #' . $order_id);
-        $seller->setEmailContent('Thank you for your order. Please find your invoice attached.');
+        $seller = szamlazz_hu_create_seller($order_id);
         
         // Create invoice
         $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
@@ -485,35 +624,8 @@ function create_invoice($order) {
         $invoice->setSeller($seller);
         $invoice->getHeader()->setCurrency($order->currency);
         
-        
-        // Get order items
-        $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
-        
-        if ($items->isEmpty()) {
-            throw new \Exception("No items found for order $order_id");
-        }
-		
-        foreach ($items as $order_item) {
-			
-			$taxRate = "0";
-			if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
-				$taxRate = $order_item->line_meta['tax_config']['rates'][0]['rate'];
-			}
-            
-            $item = new InvoiceItem(
-                $order_item->title,
-                $order_item->unit_price / 100,
-				$order_item->quantity,
-				'db',
-				$taxRate
-            );
-            
-			$item->setNetPrice($order_item->line_total / 100);
-            $item->setVatAmount($order_item->tax_amount / 100);
-            $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
-            
-            $invoice->addItem($item);
-        }
+        // Add order items to invoice
+        szamlazz_hu_add_order_items($invoice, $order_id);
         
         // Generate invoice
         $result = $agent->generateInvoice($invoice);
@@ -523,30 +635,11 @@ function create_invoice($order) {
             $invoice_number = $result->getDocumentNumber();
             
             // Save to database
-            $wpdb->insert(
-                $table_name,
-                [
-                    'order_id' => $order_id,
-                    'invoice_number' => $invoice_number,
-                    'invoice_id' => $result->getDataObj()->invoiceId ?? null
-                ],
-                ['%d', '%s', '%s']
-            );
+            szamlazz_hu_save_invoice($order_id, $result);
             
-            // Add order note
-            $note = sprintf(
-                'Számlázz.hu invoice created: %s',
-                $invoice_number
-            );
-            Activity::create([
-                'status' => 'success',
-                'log_type' => 'activity',
-                'module_type' => 'FluentCart\App\Models\Order',
-                'module_id' => $order_id,
-                'module_name' => 'order',
-                'title' => 'Számlázz.hu invoice successfully generated',
-                'content' => $note
-            ]);
+            // Log success
+            $message = sprintf('Számlázz.hu invoice created: %s', $invoice_number);
+            szamlazz_hu_log_activity($order_id, true, $message);
         } else {
             throw new \Exception('Failed to generate invoice: ' . $result->getMessage());
         }
@@ -554,15 +647,7 @@ function create_invoice($order) {
     } catch (\Exception $e) {
         file_put_contents('/var/www/error.txt', var_export($e, true));
         error_log('Számlázz.hu error for order ' . ($order_id ?? 'unknown') . ': ' . $e->getMessage());
-        Activity::create([
-            'status' => 'failed',
-            'log_type' => 'activity',
-            'module_type' => 'FluentCart\App\Models\Order',
-            'module_id' => $order_id,
-            'module_name' => 'order',
-            'title' => 'Számlázz.hu invoice generation failed',
-            'content' => $e->getMessage()
-        ]);
+        szamlazz_hu_log_activity($order_id, false, $e->getMessage());
     }
 }
 
