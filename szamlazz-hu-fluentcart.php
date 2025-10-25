@@ -601,7 +601,8 @@ function create_invoice($order) {
         // Check if invoice already exists
         $existing = szamlazz_hu_check_existing_invoice($order_id);
         if ($existing) {
-            error_log("Invoice already exists for order $order_id: {$existing->invoice_number}");
+            $message = sprintf('Invoice already exists: %s', $existing->invoice_number);
+            szamlazz_hu_log_activity($order_id, true, $message);
             return;
         }
         
@@ -646,7 +647,6 @@ function create_invoice($order) {
         
     } catch (\Exception $e) {
         file_put_contents('/var/www/error.txt', var_export($e, true));
-        error_log('Számlázz.hu error for order ' . ($order_id ?? 'unknown') . ': ' . $e->getMessage());
         szamlazz_hu_log_activity($order_id, false, $e->getMessage());
     }
 }
@@ -713,7 +713,7 @@ add_action('init', function() {
             }
             
         } catch (\Exception $e) {
-            error_log('Számlázz.hu download error: ' . $e->getMessage());
+            szamlazz_hu_log_activity($order_id, false, 'Download error: ' . $e->getMessage());
             return;
         }
     }
