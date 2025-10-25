@@ -585,18 +585,45 @@ function szamlazz_hu_log_activity($order_id, $success, $message) {
     ]);
 }
 
+function generate_invoice($order_id) {
+    // Get and validate API key
+    $api_key = szamlazz_hu_get_api_key();
+    // Create Számla Agent
+    $agent = SzamlaAgentAPI::create($api_key);
+    $agent->setPdfFileSave(false);
+    
+    // Get VAT number from checkout data
+    $vat_number = szamlazz_hu_get_vat_number($order_id);
+    
+    // Create buyer with taxpayer data if available
+    $buyer = szamlazz_hu_create_buyer($order, $agent, $vat_number);
+    
+    // Create seller with email settings
+    $seller = szamlazz_hu_create_seller($order_id);
+    
+    // Create invoice
+    $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
+    $invoice->setBuyer($buyer);
+    $invoice->setSeller($seller);
+    $invoice->getHeader()->setCurrency($order->currency);
+    
+    // Add order items to invoice
+    szamlazz_hu_add_order_items($invoice, $order_id);
+    
+    // Generate invoice
+    return $agent->generateInvoice($invoice);
+}
+
 /**
  * Main invoice creation function
  */
-function create_invoice($order) {
+function create_invoice($order, $main_order) {
     $order_id = $order->id;
+    $main_order_id = $main_order == null ? $order_id : $main_order->id;
     
     try {
         // Initialize paths and ensure folders exist
         szamlazz_hu_init_paths();
-        
-        // Get and validate API key
-        $api_key = szamlazz_hu_get_api_key();
         
         // Check if invoice already exists
         $existing = szamlazz_hu_check_existing_invoice($order_id);
@@ -606,31 +633,7 @@ function create_invoice($order) {
             return;
         }
         
-        // Create Számla Agent
-        $agent = SzamlaAgentAPI::create($api_key);
-        $agent->setPdfFileSave(false);
-        
-        // Get VAT number from checkout data
-        $vat_number = szamlazz_hu_get_vat_number($order_id);
-        
-        // Create buyer with taxpayer data if available
-        $buyer = szamlazz_hu_create_buyer($order, $agent, $vat_number);
-        
-        // Create seller with email settings
-        $seller = szamlazz_hu_create_seller($order_id);
-        
-        // Create invoice
-        $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
-        $invoice->setBuyer($buyer);
-        $invoice->setSeller($seller);
-        $invoice->getHeader()->setCurrency($order->currency);
-        
-        // Add order items to invoice
-        szamlazz_hu_add_order_items($invoice, $order_id);
-        
-        // Generate invoice
-        $result = $agent->generateInvoice($invoice);
-        
+        $result = generate_invoice($main_order_id);
         // Check if invoice was created successfully
         if ($result->isSuccess()) {
             $invoice_number = $result->getDocumentNumber();
@@ -652,8 +655,9 @@ function create_invoice($order) {
 }
 
 add_action('fluent_cart/subscription_renewed', function($data) {
-    $order = $data['main_order'];
-    create_invoice($order);
+    $order = $data['order'];
+    $main_order = $data['main_order'];
+    create_invoice($order, $main_order);
 }, 10, 1);
 
 add_action('init', function() {
