@@ -551,7 +551,8 @@ function create_seller($order_id) {
 /**
  * Add order items to invoice
  */
-function add_order_items($invoice, $order_id) {
+function add_order_items($invoice, $order) {
+    $order_id = $order->id;
     $items = OrderItem::where('order_id', $order_id)->get();
     
     if ($items->isEmpty()) {
@@ -562,8 +563,10 @@ function add_order_items($invoice, $order_id) {
     
     foreach ($items as $order_item) {
         $taxRate = "0";
-        if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
-            $taxRate = $order_item->line_meta['tax_config']['rates'][0]['rate'];
+        if ($order->tax_behavior != 0) {
+            if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
+                $taxRate = $order_item->line_meta['tax_config']['rates'][0]['rate'];
+            }
         }
         
         $item = new InvoiceItem(
@@ -701,7 +704,7 @@ function generate_invoice($order) {
     $invoice->getHeader()->setCurrency($order->currency);
     
     // Add order items to invoice
-    add_order_items($invoice, $order_id);
+    add_order_items($invoice, $order);
     
     debug_log($order_id, 'Generating invoice via API');
     
