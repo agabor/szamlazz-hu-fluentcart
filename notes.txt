@@ -1,0 +1,3 @@
+Shipping TAX rate bug, and documentation error:
+https://dev.fluentcart.com/database/models/tax-rate
+for_shipping is an integer
