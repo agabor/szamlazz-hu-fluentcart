@@ -608,16 +608,13 @@ function add_order_items($invoice, $order) {
     if ($order->shipping_total != 0) {
         $item = null;
 
+        $item = new InvoiceItem("Shipping", $order->shipping_total / 100);
         if ($order->tax_behavior != 0) {
-            $netPrice = ($order->shipping_total - $order->shipping_tax) / 100;
-            $item = new InvoiceItem("Shipping", $netPrice);
-            $item->setVatAmount($order->shipping_tax / 100);
-            $item->setNetPrice($netPrice);
+            $item->setVatAmount($order->shipping_total * 0.27 / 100);
             $item->setVat("27");
         } else {
-            $netPrice = $order->shipping_total / 100;
-            $item = new InvoiceItem("Shipping", $netPrice);
-            $item->setNetPrice($netPrice);
+            $item->setVatAmount(0);
+            $item->setVat("0");
         }
         $item->setGrossAmount($order->shipping_total / 100);
         $invoice->addItem($item);
