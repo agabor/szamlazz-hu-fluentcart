@@ -585,7 +585,8 @@ function szamlazz_hu_log_activity($order_id, $success, $message) {
     ]);
 }
 
-function generate_invoice($order_id) {
+function generate_invoice($order) {
+    $order_id = $order->id;
     // Get and validate API key
     $api_key = szamlazz_hu_get_api_key();
     // Create Számla Agent
@@ -617,9 +618,11 @@ function generate_invoice($order_id) {
 /**
  * Main invoice creation function
  */
-function create_invoice($order, $main_order) {
+function create_invoice($order, $main_order = null) {
     $order_id = $order->id;
-    $main_order_id = $main_order == null ? $order_id : $main_order->id;
+    if ($main_order === null)
+        $main_order = $order;
+    $main_order_id = $main_order->id;
     
     try {
         // Initialize paths and ensure folders exist
@@ -633,7 +636,7 @@ function create_invoice($order, $main_order) {
             return;
         }
         
-        $result = generate_invoice($main_order_id);
+        $result = generate_invoice($main_order);
         // Check if invoice was created successfully
         if ($result->isSuccess()) {
             $invoice_number = $result->getDocumentNumber();
