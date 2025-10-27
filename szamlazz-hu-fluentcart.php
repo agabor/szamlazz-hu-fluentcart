@@ -376,7 +376,7 @@ function get_taxpayer_data($order_id, $agent, $vat_number) {
             return null;
         }
         
-        debug_log($order_id, 'Taxpayer XML received, parsing data');
+        debug_log($order_id, 'Taxpayer XML received, parsing data', $taxpayer_xml);
         
         $xml = new \SimpleXMLElement($taxpayer_xml);
         
@@ -479,7 +479,7 @@ function create_buyer($order, $agent, $vat_number = null) {
     $buyer_postcode = $billing->postcode;
     $buyer_city = $billing->city;
     $buyer_address = $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '');
-    $buyer_vat_id = null;
+    $buyer_vat_id = $vat_number;
     
     // If VAT number is provided, try to get taxpayer data from NAV
     if (!empty($vat_number)) {
