@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+namespace SzamlazzHuFluentCart;
+
 require __DIR__ . DIRECTORY_SEPARATOR .'autoload.php';
 
 use \SzamlaAgent\SzamlaAgentAPI;
@@ -30,7 +32,7 @@ use FluentCart\App\Models\Activity;
 /**
  * Initialize Szamlazz.hu base path and ensure required folders exist
  */
-function szamlazz_hu_init_paths() {
+function init_paths() {
     // Get or generate a random 8-character suffix
     $suffix = get_option('szamlazz_hu_folder_suffix', '');
     if (empty($suffix)) {
@@ -74,7 +76,7 @@ function szamlazz_hu_init_paths() {
 /**
  * Get the cache directory path
  */
-function szamlazz_hu_get_cache_path() {
+function get_cache_path() {
     $suffix = get_option('szamlazz_hu_folder_suffix', '');
     if (empty($suffix)) {
         return null;
@@ -87,8 +89,8 @@ function szamlazz_hu_get_cache_path() {
 /**
  * Get the cache directory size in bytes
  */
-function szamlazz_hu_get_cache_size() {
-    $cache_path = szamlazz_hu_get_cache_path();
+function get_cache_size() {
+    $cache_path = get_cache_path();
     if (!$cache_path || !file_exists($cache_path)) {
         return 0;
     }
@@ -110,7 +112,7 @@ function szamlazz_hu_get_cache_size() {
 /**
  * Format bytes to human-readable size
  */
-function szamlazz_hu_format_bytes($bytes, $precision = 2) {
+function format_bytes($bytes, $precision = 2) {
     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
     
     for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
@@ -123,8 +125,8 @@ function szamlazz_hu_format_bytes($bytes, $precision = 2) {
 /**
  * Clear the cache directory
  */
-function szamlazz_hu_clear_cache() {
-    $cache_path = szamlazz_hu_get_cache_path();
+function clear_cache() {
+    $cache_path = get_cache_path();
     
     if ($cache_path && file_exists($cache_path)) {
         // Recursively delete all files and folders
@@ -152,8 +154,8 @@ function szamlazz_hu_clear_cache() {
 /**
  * Get PDF file path for invoice number
  */
-function szamlazz_hu_get_pdf_path($invoice_number) {
-    $cache_path = szamlazz_hu_get_cache_path();
+function get_pdf_path($invoice_number) {
+    $cache_path = get_cache_path();
     if (!$cache_path) {
         return null;
     }
@@ -174,7 +176,7 @@ function szamlazz_hu_get_pdf_path($invoice_number) {
 /**
  * Create database table on plugin activation
  */
-register_activation_hook(__FILE__, function() {
+\register_activation_hook(__FILE__, function() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'szamlazz_invoices';
     $charset_collate = $wpdb->get_charset_collate();
@@ -197,29 +199,29 @@ register_activation_hook(__FILE__, function() {
 /**
  * Register admin menu
  */
-add_action('admin_menu', function() {
-    add_options_page(
+\add_action('admin_menu', function() {
+    \add_options_page(
         'Számlázz.hu FluentCart Settings',
         'Számlázz.hu',
         'manage_options',
         'szamlazz-hu-fluentcart',
-        'szamlazz_hu_fluentcart_settings_page'
+        __NAMESPACE__ . '\\settings_page'
     );
 });
 
 /**
  * Register settings
  */
-add_action('admin_init', function() {
-    register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_agent_api_key');
+\add_action('admin_init', function() {
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_agent_api_key');
     
     // Handle clear cache action
-    if (isset($_POST['szamlazz_hu_clear_cache']) && check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
-        szamlazz_hu_clear_cache();
-        add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', 'Cache cleared successfully', 'updated');
+    if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
+        clear_cache();
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', 'Cache cleared successfully', 'updated');
     }
     
-    add_settings_section(
+    \add_settings_section(
         'szamlazz_hu_api_section',
         'API Settings',
         function() {
@@ -228,30 +230,30 @@ add_action('admin_init', function() {
         'szamlazz-hu-fluentcart'
     );
     
-    add_settings_field(
+    \add_settings_field(
         'szamlazz_hu_agent_api_key',
         'Agent API Key',
         function() {
-            $value = get_option('szamlazz_hu_agent_api_key', '');
-            echo '<input type="text" name="szamlazz_hu_agent_api_key" value="' . esc_attr($value) . '" class="regular-text" />';
+            $value = \get_option('szamlazz_hu_agent_api_key', '');
+            echo '<input type="text" name="szamlazz_hu_agent_api_key" value="' . \esc_attr($value) . '" class="regular-text" />';
             echo '<p class="description">Your Számlázz.hu Agent API Key</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_api_section'
     );
     
-    add_settings_section(
+    \add_settings_section(
         'szamlazz_hu_cache_section',
         'Cache Management',
         function() {
-            $cache_size = szamlazz_hu_get_cache_size();
-            $formatted_size = szamlazz_hu_format_bytes($cache_size);
+            $cache_size = get_cache_size();
+            $formatted_size = format_bytes($cache_size);
             echo '<p>Current cache size: <strong>' . esc_html($formatted_size) . '</strong></p>';
         },
         'szamlazz-hu-fluentcart'
     );
     
-    add_settings_field(
+    \add_settings_field(
         'szamlazz_hu_clear_cache_field',
         'Clear Cache',
         function() {
@@ -265,59 +267,59 @@ add_action('admin_init', function() {
 /**
  * Add settings link to plugins page
  */
-add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+\add_filter('plugin_action_links_' . \plugin_basename(__FILE__), function($links) {
     $settings_link = sprintf(
         '<a href="%s">%s</a>',
-        admin_url('options-general.php?page=szamlazz-hu-fluentcart'),
-        __('Settings', 'szamlazz-hu-fluentcart')
+        \admin_url('options-general.php?page=szamlazz-hu-fluentcart'),
+        \__('Settings', 'szamlazz-hu-fluentcart')
     );
-    array_unshift($links, $settings_link);
+    \array_unshift($links, $settings_link);
     return $links;
 });
 
 /**
  * Settings page callback
  */
-function szamlazz_hu_fluentcart_settings_page() {
-    if (!current_user_can('manage_options')) {
+function settings_page() {
+    if (!\current_user_can('manage_options')) {
         return;
     }
     
     if (isset($_GET['settings-updated'])) {
-        add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_message', 'Settings Saved', 'updated');
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_message', 'Settings Saved', 'updated');
     }
     
-    settings_errors('szamlazz_hu_messages');
+    \settings_errors('szamlazz_hu_messages');
     ?>
     <div class="wrap">
-        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        <h1><?php echo \esc_html(\get_admin_page_title()); ?></h1>
         
         <!-- API Settings Form -->
         <form action="options.php" method="post">
             <?php
-            settings_fields('szamlazz_hu_fluentcart_settings');
-            do_settings_sections('szamlazz-hu-fluentcart');
-            submit_button('Save Settings');
+            \settings_fields('szamlazz_hu_fluentcart_settings');
+            \do_settings_sections('szamlazz-hu-fluentcart');
+            \submit_button('Save Settings');
             ?>
         </form>
         
         <!-- Clear Cache Form -->
-        <form action="<?php echo esc_url(admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
-            <?php wp_nonce_field('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce'); ?>
+        <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
+            <?php \wp_nonce_field('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce'); ?>
             <input type="hidden" name="szamlazz_hu_clear_cache" value="1" />
-            <?php submit_button('Clear Cache', 'secondary', 'submit', false); ?>
+            <?php \submit_button('Clear Cache', 'secondary', 'submit', false); ?>
         </form>
     </div>
     <?php
 }
 
 
-add_action('fluent_cart/order_paid_done', function($data) {
+\add_action('fluent_cart/order_paid_done', function($data) {
     $order = $data['order'];
     create_invoice($order);
 }, 10, 1);
 
-add_action('fluent_cart/payment_status_changed_to_paid', function($data) {
+\add_action('fluent_cart/payment_status_changed_to_paid', function($data) {
     $order = $data['order'];
     create_invoice($order);
 }, 10, 1);
@@ -325,7 +327,7 @@ add_action('fluent_cart/payment_status_changed_to_paid', function($data) {
 /**
  * Check if an invoice already exists for the given order
  */
-function szamlazz_hu_check_existing_invoice($order_id) {
+function check_existing_invoice($order_id) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'szamlazz_invoices';
     
@@ -338,8 +340,8 @@ function szamlazz_hu_check_existing_invoice($order_id) {
 /**
  * Get and validate API key from settings
  */
-function szamlazz_hu_get_api_key() {
-    $api_key = get_option('szamlazz_hu_agent_api_key', '');
+function get_api_key() {
+    $api_key = \get_option('szamlazz_hu_agent_api_key', '');
     
     if (empty($api_key)) {
         throw new \Exception('Agent API Key is not configured. Please configure it in Settings > Számlázz.hu');
@@ -351,7 +353,7 @@ function szamlazz_hu_get_api_key() {
 /**
  * Get VAT number from checkout data
  */
-function szamlazz_hu_get_vat_number($order_id) {
+function get_vat_number($order_id) {
     $checkout_data = FluentCart\App\Models\Cart::where('order_id', $order_id)->first()['checkout_data'];
     return $checkout_data['tax_data']['vat_number'] ?? null;
 }
@@ -359,7 +361,7 @@ function szamlazz_hu_get_vat_number($order_id) {
 /**
  * Fetch and parse taxpayer data from NAV
  */
-function szamlazz_hu_get_taxpayer_data($agent, $vat_number) {
+function get_taxpayer_data($agent, $vat_number) {
     try {
         $taxpayer_response = $agent->getTaxPayer($vat_number);
         $taxpayer_xml = $taxpayer_response->getTaxPayerData();
@@ -437,7 +439,7 @@ function szamlazz_hu_get_taxpayer_data($agent, $vat_number) {
         return $data;
         
     } catch (\Exception $e) {
-        error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
+        \error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
         return null;
     }
 }
@@ -445,7 +447,7 @@ function szamlazz_hu_get_taxpayer_data($agent, $vat_number) {
 /**
  * Create buyer object from order data
  */
-function szamlazz_hu_create_buyer($order, $agent, $vat_number = null) {
+function create_buyer($order, $agent, $vat_number = null) {
     $order_id = $order->id;
     
     // Get billing address
@@ -463,7 +465,7 @@ function szamlazz_hu_create_buyer($order, $agent, $vat_number = null) {
     
     // If VAT number is provided, try to get taxpayer data from NAV
     if (!empty($vat_number)) {
-        $taxpayer_data = szamlazz_hu_get_taxpayer_data($agent, $vat_number);
+        $taxpayer_data = get_taxpayer_data($agent, $vat_number);
         
         if ($taxpayer_data) {
             if (isset($taxpayer_data['name'])) {
@@ -509,11 +511,11 @@ function szamlazz_hu_create_buyer($order, $agent, $vat_number = null) {
 /**
  * Create seller object with email settings
  */
-function szamlazz_hu_create_seller($order_id) {
+function create_seller($order_id) {
     $seller = new Seller();
     
     // Configure email settings
-    $seller->setEmailReplyTo(get_option('admin_email'));
+    $seller->setEmailReplyTo(\get_option('admin_email'));
     $seller->setEmailSubject('Invoice for order #' . $order_id);
     $seller->setEmailContent('Thank you for your order. Please find your invoice attached.');
     
@@ -523,7 +525,7 @@ function szamlazz_hu_create_seller($order_id) {
 /**
  * Add order items to invoice
  */
-function szamlazz_hu_add_order_items($invoice, $order_id) {
+function add_order_items($invoice, $order_id) {
     $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
     
     if ($items->isEmpty()) {
@@ -555,7 +557,7 @@ function szamlazz_hu_add_order_items($invoice, $order_id) {
 /**
  * Save invoice data to database
  */
-function szamlazz_hu_save_invoice($order_id, $result) {
+function save_invoice($order_id, $result) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'szamlazz_invoices';
     
@@ -573,7 +575,7 @@ function szamlazz_hu_save_invoice($order_id, $result) {
 /**
  * Log invoice activity
  */
-function szamlazz_hu_log_activity($order_id, $success, $message) {
+function log_activity($order_id, $success, $message) {
     Activity::create([
         'status' => $success ? 'success' : 'failed',
         'log_type' => 'activity',
@@ -588,19 +590,19 @@ function szamlazz_hu_log_activity($order_id, $success, $message) {
 function generate_invoice($order) {
     $order_id = $order->id;
     // Get and validate API key
-    $api_key = szamlazz_hu_get_api_key();
+    $api_key = get_api_key();
     // Create Számla Agent
     $agent = SzamlaAgentAPI::create($api_key);
     $agent->setPdfFileSave(false);
     
     // Get VAT number from checkout data
-    $vat_number = szamlazz_hu_get_vat_number($order_id);
+    $vat_number = get_vat_number($order_id);
     
     // Create buyer with taxpayer data if available
-    $buyer = szamlazz_hu_create_buyer($order, $agent, $vat_number);
+    $buyer = create_buyer($order, $agent, $vat_number);
     
     // Create seller with email settings
-    $seller = szamlazz_hu_create_seller($order_id);
+    $seller = create_seller($order_id);
     
     // Create invoice
     $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
@@ -609,7 +611,7 @@ function generate_invoice($order) {
     $invoice->getHeader()->setCurrency($order->currency);
     
     // Add order items to invoice
-    szamlazz_hu_add_order_items($invoice, $order_id);
+    add_order_items($invoice, $order_id);
     
     // Generate invoice
     return $agent->generateInvoice($invoice);
@@ -626,13 +628,13 @@ function create_invoice($order, $main_order = null) {
     
     try {
         // Initialize paths and ensure folders exist
-        szamlazz_hu_init_paths();
+        init_paths();
         
         // Check if invoice already exists
-        $existing = szamlazz_hu_check_existing_invoice($order_id);
+        $existing = check_existing_invoice($order_id);
         if ($existing) {
             $message = sprintf('Invoice already exists: %s', $existing->invoice_number);
-            szamlazz_hu_log_activity($order_id, true, $message);
+            log_activity($order_id, true, $message);
             return;
         }
         
@@ -642,32 +644,32 @@ function create_invoice($order, $main_order = null) {
             $invoice_number = $result->getDocumentNumber();
             
             // Save to database
-            szamlazz_hu_save_invoice($order_id, $result);
+            save_invoice($order_id, $result);
             
             // Log success
             $message = sprintf('Számlázz.hu invoice created: %s', $invoice_number);
-            szamlazz_hu_log_activity($order_id, true, $message);
+            log_activity($order_id, true, $message);
         } else {
             throw new \Exception('Failed to generate invoice: ' . $result->getMessage());
         }
         
     } catch (\Exception $e) {
-        file_put_contents('/var/www/error.txt', var_export($e, true));
-        szamlazz_hu_log_activity($order_id, false, $e->getMessage());
+        \file_put_contents('/var/www/error.txt', \var_export($e, true));
+        log_activity($order_id, false, $e->getMessage());
     }
 }
 
-add_action('fluent_cart/subscription_renewed', function($data) {
+\add_action('fluent_cart/subscription_renewed', function($data) {
     $order = $data['order'];
     $main_order = $data['main_order'];
     create_invoice($order, $main_order);
 }, 10, 1);
 
-add_action('init', function() {
+\add_action('init', function() {
     if (isset($_GET['fluent-cart']) && $_GET['fluent-cart'] === 'receipt') {
         // Your custom logic here
-        $order_hash = isset($_GET['order_hash']) ? sanitize_text_field($_GET['order_hash']) : '';
-        $download = isset($_GET['download']) ? sanitize_text_field($_GET['download']) : '';
+        $order_hash = isset($_GET['order_hash']) ? \sanitize_text_field($_GET['order_hash']) : '';
+        $download = isset($_GET['download']) ? \sanitize_text_field($_GET['download']) : '';
         if ($download !== '1')
             return;
 
@@ -676,10 +678,10 @@ add_action('init', function() {
     
         try {
             // Initialize paths and ensure folders exist
-            szamlazz_hu_init_paths();
+            init_paths();
             
             // Get API key from settings
-            $api_key = get_option('szamlazz_hu_agent_api_key', '');
+            $api_key = \get_option('szamlazz_hu_agent_api_key', '');
             
             if (empty($api_key)) {
                 return;
@@ -694,14 +696,14 @@ add_action('init', function() {
             
             if ($invoice_record) {
                 // Check if PDF exists in cache
-                $cached_pdf_path = szamlazz_hu_get_pdf_path($invoice_record->invoice_number);
+                $cached_pdf_path = get_pdf_path($invoice_record->invoice_number);
                 
-                if ($cached_pdf_path && file_exists($cached_pdf_path)) {
+                if ($cached_pdf_path && \file_exists($cached_pdf_path)) {
                     // Serve from cache
-                    header('Content-Type: application/pdf');
-                    header('Content-Disposition: attachment; filename="' . basename($cached_pdf_path) . '"');
-                    header('Content-Length: ' . filesize($cached_pdf_path));
-                    readfile($cached_pdf_path);
+                    \header('Content-Type: application/pdf');
+                    \header('Content-Disposition: attachment; filename="' . \basename($cached_pdf_path) . '"');
+                    \header('Content-Length: ' . \filesize($cached_pdf_path));
+                    \readfile($cached_pdf_path);
                     exit;
                 }
                 
@@ -720,7 +722,7 @@ add_action('init', function() {
             }
             
         } catch (\Exception $e) {
-            szamlazz_hu_log_activity($order_id, false, 'Download error: ' . $e->getMessage());
+            log_activity($order_id, false, 'Download error: ' . $e->getMessage());
             return;
         }
     }
