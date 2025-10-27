@@ -385,7 +385,7 @@ function get_taxpayer_data($order_id, $agent, $vat_number) {
         $xml->registerXPathNamespace('ns3', 'http://schemas.nav.gov.hu/OSA/3.0/base');
 
         $taxpayerValidity = $xml->xpath('//ns2:taxpayerValidity');
-        if ("true" === (string)$taxpayer_short_name[0]) {
+        if ("true" === (string)$taxpayerValidity[0]) {
             debug_log($order_id, 'Taxpayer is valid');
         } else {
             debug_log($order_id, 'Taxpayer is not valid');
@@ -578,7 +578,11 @@ function add_order_items($invoice, $order) {
         );
         
         $item->setNetPrice($order_item->line_total / 100);
-        $item->setVatAmount($order_item->tax_amount / 100);
+        if ($order->tax_behavior != 0) {
+            $item->setVatAmount($order_item->tax_amount / 100);
+        } else {
+            $item->setVatAmount(0);
+        }
         $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
         
         debug_log(
