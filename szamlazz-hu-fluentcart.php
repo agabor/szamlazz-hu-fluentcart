@@ -11,12 +11,12 @@
  * Text Domain: szamlazz-hu-fluentcart
  */
 
+namespace SzamlazzHuFluentCart;
+
 // Exit if accessed directly
-if (!defined('ABSPATH')) {
+if (!\defined('ABSPATH')) {
     exit;
 }
-
-namespace SzamlazzHuFluentCart;
 
 require __DIR__ . DIRECTORY_SEPARATOR .'autoload.php';
 
@@ -28,6 +28,9 @@ use \SzamlaAgent\Document\Invoice\Invoice;
 use \SzamlaAgent\Item\InvoiceItem;
 
 use FluentCart\App\Models\Activity;
+use FluentCart\App\Models\Cart;
+use FluentCart\App\Models\Order;
+use FluentCart\App\Models\OrderItem;
 
 /**
  * Initialize Szamlazz.hu base path and ensure required folders exist
@@ -354,7 +357,7 @@ function get_api_key() {
  * Get VAT number from checkout data
  */
 function get_vat_number($order_id) {
-    $checkout_data = FluentCart\App\Models\Cart::where('order_id', $order_id)->first()['checkout_data'];
+    $checkout_data = Cart::where('order_id', $order_id)->first()['checkout_data'];
     return $checkout_data['tax_data']['vat_number'] ?? null;
 }
 
@@ -541,7 +544,7 @@ function create_seller($order_id) {
  * Add order items to invoice
  */
 function add_order_items($invoice, $order_id) {
-    $items = \FluentCart\App\Models\OrderItem::where('order_id', $order_id)->get();
+    $items = OrderItem::where('order_id', $order_id)->get();
     
     if ($items->isEmpty()) {
         throw new \Exception("No items found for order $order_id");
@@ -760,7 +763,7 @@ function create_invoice($order, $main_order = null) {
         if ($download !== '1')
             return;
 
-        $order_id = FluentCart\App\Models\Order::where('uuid', $order_hash)->value('id');
+        $order_id = Order::where('uuid', $order_hash)->value('id');
         global $wpdb;
     
         try {
