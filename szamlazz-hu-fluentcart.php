@@ -578,11 +578,11 @@ function add_order_items($invoice, $order) {
         );
         
         $item->setNetPrice($order_item->line_total / 100);
+        $tax_amount = 0;
         if ($order->tax_behavior != 0) {
-            $item->setVatAmount($order_item->tax_amount / 100);
-        } else {
-            $item->setVatAmount(0);
+            $tax_amount = $order_item->tax_amount / 100;
         }
+        $item->setVatAmount($tax_amount);
         $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
         
         debug_log(
