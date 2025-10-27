@@ -583,7 +583,7 @@ function add_order_items($invoice, $order) {
             $tax_amount = $order_item->tax_amount / 100;
         }
         $item->setVatAmount($tax_amount);
-        $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
+        $item->setGrossAmount(($order_item->line_total + $tax_amount) / 100);
         
         debug_log(
             $order_id, 
