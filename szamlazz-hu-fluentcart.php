@@ -587,6 +587,41 @@ function log_activity($order_id, $success, $message) {
     ]);
 }
 
+/**
+ * Debug logging function - only works when WP_DEBUG is enabled
+ * 
+ * @param int $order_id The order ID
+ * @param string $message The message to log
+ * @param mixed ...$args Variable-length argument list to be concatenated with commas
+ */
+function debug_log($order_id, $message, ...$args) {
+    // Only log if WP_DEBUG is enabled
+    if (!\defined('WP_DEBUG') || !WP_DEBUG) {
+        return;
+    }
+    
+    // Concatenate message with additional arguments using commas
+    if (!empty($args)) {
+        $formatted_message = $message . ', ' . \implode(', ', $args);
+    } else {
+        $formatted_message = $message;
+    }
+    
+    // Create order Activity with info status
+    Activity::create([
+        'status' => 'info',
+        'log_type' => 'activity',
+        'module_type' => 'FluentCart\App\Models\Order',
+        'module_id' => $order_id,
+        'module_name' => 'order',
+        'title' => 'Számlázz.hu debug info',
+        'content' => $formatted_message
+    ]);
+    
+    // Write to debug.log file
+    \error_log('[Számlázz.hu FluentCart - Order #' . $order_id . '] ' . $formatted_message);
+}
+
 function generate_invoice($order) {
     $order_id = $order->id;
     // Get and validate API key
