@@ -609,14 +609,16 @@ function add_order_items($invoice, $order) {
         $item = null;
 
         $item = new InvoiceItem("Shipping", $order->shipping_total / 100);
+        $item->setNetPrice($order->shipping_total / 100);
         if ($order->tax_behavior != 0) {
             $item->setVatAmount($order->shipping_total * 0.27 / 100);
             $item->setVat("27");
+            $item->setGrossAmount($order->shipping_total * 1.27 / 100);
         } else {
             $item->setVatAmount(0);
             $item->setVat("0");
+            $item->setGrossAmount($order->shipping_total / 100);
         }
-        $item->setGrossAmount($order->shipping_total / 100);
         $invoice->addItem($item);
     }
 }
