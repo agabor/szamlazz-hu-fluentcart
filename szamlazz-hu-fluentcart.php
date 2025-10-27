@@ -376,14 +376,22 @@ function get_taxpayer_data($order_id, $agent, $vat_number) {
             return null;
         }
         
-        debug_log($order_id, 'Taxpayer XML received, parsing data', $taxpayer_xml);
+        debug_log($order_id, 'Taxpayer XML received, parsing data');
         
         $xml = new \SimpleXMLElement($taxpayer_xml);
         
         // Register namespaces
         $xml->registerXPathNamespace('ns2', 'http://schemas.nav.gov.hu/OSA/3.0/api');
         $xml->registerXPathNamespace('ns3', 'http://schemas.nav.gov.hu/OSA/3.0/base');
-        
+
+        $taxpayerValidity = $xml->xpath('//ns2:taxpayerValidity');
+        if ("true" === (string)$taxpayer_short_name[0]) {
+            debug_log($order_id, 'Taxpayer is valid');
+        } else {
+            debug_log($order_id, 'Taxpayer is not valid');
+            return;
+        }
+
         $data = [];
         
         // Extract taxpayer name
@@ -479,7 +487,7 @@ function create_buyer($order, $agent, $vat_number = null) {
     $buyer_postcode = $billing->postcode;
     $buyer_city = $billing->city;
     $buyer_address = $billing->address_1 . ($billing->address_2 ? ' ' . $billing->address_2 : '');
-    $buyer_vat_id = $vat_number;
+    $buyer_vat_id = $billing->country . $vat_number;
     
     // If VAT number is provided, try to get taxpayer data from NAV
     if (!empty($vat_number)) {
