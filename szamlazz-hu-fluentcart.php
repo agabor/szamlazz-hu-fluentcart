@@ -541,7 +541,7 @@ function szamlazz_hu_add_order_items($invoice, $order_id) {
             $order_item->unit_price / 100,
             $order_item->quantity,
             'db',
-            $taxRate
+            strval($taxRate)
         );
         
         $item->setNetPrice($order_item->line_total / 100);
