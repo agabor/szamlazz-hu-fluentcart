@@ -361,14 +361,19 @@ function get_vat_number($order_id) {
 /**
  * Fetch and parse taxpayer data from NAV
  */
-function get_taxpayer_data($agent, $vat_number) {
+function get_taxpayer_data($order_id, $agent, $vat_number) {
     try {
+        debug_log($order_id, 'Fetching taxpayer data from NAV', 'VAT number', $vat_number);
+        
         $taxpayer_response = $agent->getTaxPayer($vat_number);
         $taxpayer_xml = $taxpayer_response->getTaxPayerData();
         
         if (!$taxpayer_xml) {
+            debug_log($order_id, 'No taxpayer data returned from NAV');
             return null;
         }
+        
+        debug_log($order_id, 'Taxpayer XML received, parsing data');
         
         $xml = new \SimpleXMLElement($taxpayer_xml);
         
@@ -384,8 +389,10 @@ function get_taxpayer_data($agent, $vat_number) {
         
         if (!empty($taxpayer_short_name)) {
             $data['name'] = (string)$taxpayer_short_name[0];
+            debug_log($order_id, 'Taxpayer name extracted', 'Name', $data['name']);
         } elseif (!empty($taxpayer_name)) {
             $data['name'] = (string)$taxpayer_name[0];
+            debug_log($order_id, 'Taxpayer name extracted', 'Name', $data['name']);
         }
         
         // Extract VAT ID components
@@ -400,6 +407,7 @@ function get_taxpayer_data($agent, $vat_number) {
                 (string)$vat_code[0],
                 (string)$county_code[0]
             );
+            debug_log($order_id, 'VAT ID formatted', $data['vat_id']);
         }
         
         // Extract address
@@ -436,9 +444,16 @@ function get_taxpayer_data($agent, $vat_number) {
             $data['address'] = implode(' ', $address_parts);
         }
         
+        if (isset($data['postcode']) && isset($data['city']) && isset($data['address'])) {
+            debug_log($order_id, 'Taxpayer address extracted', $data['postcode'], $data['city'], $data['address']);
+        }
+        
+        debug_log($order_id, 'Taxpayer data successfully parsed from NAV');
+        
         return $data;
         
     } catch (\Exception $e) {
+        debug_log($order_id, 'Failed to fetch taxpayer data', 'Error', $e->getMessage());
         \error_log("Failed to fetch taxpayer data for VAT number $vat_number: " . $e->getMessage());
         return null;
     }
@@ -465,7 +480,7 @@ function create_buyer($order, $agent, $vat_number = null) {
     
     // If VAT number is provided, try to get taxpayer data from NAV
     if (!empty($vat_number)) {
-        $taxpayer_data = get_taxpayer_data($agent, $vat_number);
+        $taxpayer_data = get_taxpayer_data($order_id, $agent, $vat_number);
         
         if ($taxpayer_data) {
             if (isset($taxpayer_data['name'])) {
@@ -532,6 +547,8 @@ function add_order_items($invoice, $order_id) {
         throw new \Exception("No items found for order $order_id");
     }
     
+    debug_log($order_id, 'Adding order items', 'Item count', $items->count());
+    
     foreach ($items as $order_item) {
         $taxRate = "0";
         if (isset($order_item->line_meta['tax_config']['rates'][0]['rate'])) {
@@ -549,6 +566,24 @@ function add_order_items($invoice, $order_id) {
         $item->setNetPrice($order_item->line_total / 100);
         $item->setVatAmount($order_item->tax_amount / 100);
         $item->setGrossAmount(($order_item->line_total + $order_item->tax_amount) / 100);
+        
+        debug_log(
+            $order_id, 
+            'Item', 
+            $order_item->title, 
+            'Qty', 
+            $order_item->quantity, 
+            'Unit price', 
+            $order_item->unit_price / 100,
+            'Tax rate', 
+            $taxRate . '%',
+            'Net', 
+            $order_item->line_total / 100,
+            'VAT', 
+            $order_item->tax_amount / 100,
+            'Gross', 
+            ($order_item->line_total + $order_item->tax_amount) / 100
+        );
         
         $invoice->addItem($item);
     }
@@ -624,6 +659,9 @@ function debug_log($order_id, $message, ...$args) {
 
 function generate_invoice($order) {
     $order_id = $order->id;
+    
+    debug_log($order_id, 'Starting invoice generation', 'Order ID', $order_id, 'Currency', $order->currency);
+    
     // Get and validate API key
     $api_key = get_api_key();
     // Create Számla Agent
@@ -632,9 +670,15 @@ function generate_invoice($order) {
     
     // Get VAT number from checkout data
     $vat_number = get_vat_number($order_id);
+    if ($vat_number) {
+        debug_log($order_id, 'VAT number found', $vat_number);
+    } else {
+        debug_log($order_id, 'No VAT number provided');
+    }
     
     // Create buyer with taxpayer data if available
     $buyer = create_buyer($order, $agent, $vat_number);
+    debug_log($order_id, 'Buyer created', 'Name', $buyer->getName(), 'City', $buyer->getCity());
     
     // Create seller with email settings
     $seller = create_seller($order_id);
@@ -647,6 +691,8 @@ function generate_invoice($order) {
     
     // Add order items to invoice
     add_order_items($invoice, $order_id);
+    
+    debug_log($order_id, 'Generating invoice via API');
     
     // Generate invoice
     return $agent->generateInvoice($invoice);
@@ -662,6 +708,8 @@ function create_invoice($order, $main_order = null) {
     $main_order_id = $main_order->id;
     
     try {
+        debug_log($order_id, 'Invoice creation triggered', 'Order ID', $order_id, 'Main order ID', $main_order_id);
+        
         // Initialize paths and ensure folders exist
         init_paths();
         
@@ -669,6 +717,7 @@ function create_invoice($order, $main_order = null) {
         $existing = check_existing_invoice($order_id);
         if ($existing) {
             $message = sprintf('Invoice already exists: %s', $existing->invoice_number);
+            debug_log($order_id, 'Invoice already exists', $existing->invoice_number);
             log_activity($order_id, true, $message);
             return;
         }
@@ -677,6 +726,8 @@ function create_invoice($order, $main_order = null) {
         // Check if invoice was created successfully
         if ($result->isSuccess()) {
             $invoice_number = $result->getDocumentNumber();
+            
+            debug_log($order_id, 'Invoice generated successfully', 'Invoice number', $invoice_number);
             
             // Save to database
             save_invoice($order_id, $result);
@@ -689,6 +740,7 @@ function create_invoice($order, $main_order = null) {
         }
         
     } catch (\Exception $e) {
+        debug_log($order_id, 'Invoice generation failed', 'Error', $e->getMessage());
         \file_put_contents('/var/www/error.txt', \var_export($e, true));
         log_activity($order_id, false, $e->getMessage());
     }
