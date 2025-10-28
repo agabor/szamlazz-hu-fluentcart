@@ -100,8 +100,8 @@ function get_cache_size() {
     }
     
     $size = 0;
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($cache_path, RecursiveDirectoryIterator::SKIP_DOTS)
+    $iterator = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($cache_path, \RecursiveDirectoryIterator::SKIP_DOTS)
     );
     
     foreach ($iterator as $file) {
@@ -134,9 +134,9 @@ function clear_cache() {
     
     if ($cache_path && file_exists($cache_path)) {
         // Recursively delete all files and folders
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($cache_path, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($cache_path, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
         );
         
         foreach ($iterator as $file) {
