@@ -372,12 +372,12 @@ function settings_page() {
         <?php
         $current_rates = getShippingTaxRates();
         $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
-        $is_button_disabled = empty($current_rates) || (count($current_rates) === 1 && $current_rates[0] == $selected_vat);
+        $is_button_disabled = empty($current_rates) || (count($current_rates) === 1 && $current_rates[0] == strval($selected_vat));
         ?>
         <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
             <?php \wp_nonce_field('szamlazz_hu_apply_shipping_vat_action', 'szamlazz_hu_apply_shipping_vat_nonce'); ?>
             <input type="hidden" name="szamlazz_hu_apply_shipping_vat" value="1" />
-            <?php \submit_button('Apply Shipping VAT to All Tax Rates', 'primary', 'submit', false, ['disabled' => $is_button_disabled]); ?>
+            <?php \submit_button('Apply Shipping VAT to All Tax Rates', 'primary', 'submit', false, $is_button_disabled ? ['disabled' => true] : []); ?>
         </form>
         
         <!-- Clear Cache Form -->
