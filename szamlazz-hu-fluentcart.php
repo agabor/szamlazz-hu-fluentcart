@@ -685,9 +685,13 @@ function add_order_items($invoice, $order) {
         $item = new InvoiceItem("Shipping", $order->shipping_total / 100);
         $item->setNetPrice($order->shipping_total / 100);
         if ($order->tax_behavior != 0) {
-            $item->setVatAmount($order->shipping_total * 0.27 / 100);
-            $item->setVat("27");
-            $item->setGrossAmount($order->shipping_total * 1.27 / 100);
+            // Get shipping VAT rate from settings
+            $shipping_vat = \get_option('szamlazz_hu_shipping_vat', 27);
+            $vat_multiplier = 1 + ($shipping_vat / 100);
+            
+            $item->setVatAmount($order->shipping_total * ($shipping_vat / 100) / 100);
+            $item->setVat(strval($shipping_vat));
+            $item->setGrossAmount($order->shipping_total * $vat_multiplier / 100);
         } else {
             $item->setVatAmount(0);
             $item->setVat("0");
