@@ -367,6 +367,7 @@ function settings_page() {
             \submit_button('Save Settings');
             ?>
         </form>
+        <h1>Actions</h1>
         
         <!-- Apply Shipping VAT Form -->
         <?php
