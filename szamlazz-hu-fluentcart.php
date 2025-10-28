@@ -31,6 +31,7 @@ use FluentCart\App\Models\Activity;
 use FluentCart\App\Models\Cart;
 use FluentCart\App\Models\Order;
 use FluentCart\App\Models\OrderItem;
+use FluentCart\App\Models\TaxRate;
 
 /**
  * Initialize Szamlazz.hu base path and ensure required folders exist
@@ -217,11 +218,26 @@ function get_pdf_path($invoice_number) {
  */
 \add_action('admin_init', function() {
     \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_agent_api_key');
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_shipping_vat', [
+        'type' => 'integer',
+        'default' => 27,
+        'sanitize_callback' => function($value) {
+            $allowed = [0, 5, 18, 27];
+            return in_array((int)$value, $allowed) ? (int)$value : 27;
+        }
+    ]);
     
     // Handle clear cache action
     if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
         clear_cache();
         \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', 'Cache cleared successfully', 'updated');
+    }
+    
+    // Handle apply shipping VAT action
+    if (isset($_POST['szamlazz_hu_apply_shipping_vat']) && \check_admin_referer('szamlazz_hu_apply_shipping_vat_action', 'szamlazz_hu_apply_shipping_vat_nonce')) {
+        $shipping_vat = \get_option('szamlazz_hu_shipping_vat', 27);
+        setShippingTaxRate($shipping_vat);
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_vat_applied', 'Shipping VAT rate applied to all tax rates successfully', 'updated');
     }
     
     \add_settings_section(
@@ -243,6 +259,52 @@ function get_pdf_path($invoice_number) {
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_api_section'
+    );
+    
+    \add_settings_section(
+        'szamlazz_hu_shipping_section',
+        'Shipping VAT Settings',
+        function() {
+            echo '<p>Configure the VAT rate for shipping.</p>';
+        },
+        'szamlazz-hu-fluentcart'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_shipping_vat',
+        'Shipping VAT Rate',
+        function() {
+            $value = \get_option('szamlazz_hu_shipping_vat', 27);
+            $options = [0, 5, 18, 27];
+            echo '<select name="szamlazz_hu_shipping_vat">';
+            foreach ($options as $option) {
+                $selected = ($option == $value) ? 'selected' : '';
+                echo '<option value="' . \esc_attr($option) . '" ' . $selected . '>' . \esc_html($option) . '%</option>';
+            }
+            echo '</select>';
+            echo '<p class="description">Select the VAT rate to apply to shipping</p>';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_shipping_section'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_apply_shipping_vat_field',
+        'Apply to Tax Rates',
+        function() {
+            $current_rates = getShippingTaxRates();
+            $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
+            
+            if (empty($current_rates)) {
+                echo '<p class="description" style="color: #dc3232;"><strong>Warning:</strong> No tax rates found. Please configure tax rates in FluentCart first.</p>';
+            } elseif (count($current_rates) === 1 && $current_rates[0] == $selected_vat) {
+                echo '<p class="description" style="color: #46b450;">All tax rates are already set to ' . \esc_html($selected_vat) . '%</p>';
+            } else {
+                echo '<p class="description">Current shipping VAT rates in use: ' . \esc_html(\implode(', ', $current_rates)) . '%</p>';
+            }
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_shipping_section'
     );
     
     \add_settings_section(
@@ -304,6 +366,18 @@ function settings_page() {
             \do_settings_sections('szamlazz-hu-fluentcart');
             \submit_button('Save Settings');
             ?>
+        </form>
+        
+        <!-- Apply Shipping VAT Form -->
+        <?php
+        $current_rates = getShippingTaxRates();
+        $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
+        $is_button_disabled = empty($current_rates) || (count($current_rates) === 1 && $current_rates[0] == $selected_vat);
+        ?>
+        <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
+            <?php \wp_nonce_field('szamlazz_hu_apply_shipping_vat_action', 'szamlazz_hu_apply_shipping_vat_nonce'); ?>
+            <input type="hidden" name="szamlazz_hu_apply_shipping_vat" value="1" />
+            <?php \submit_button('Apply Shipping VAT to All Tax Rates', 'primary', 'submit', false, ['disabled' => $is_button_disabled]); ?>
         </form>
         
         <!-- Clear Cache Form -->
@@ -848,3 +922,25 @@ function create_invoice($order, $main_order = null) {
         }
     }
 }, 1);
+
+function setShippingTaxRate($vatRate) {
+    $taxRates = FluentCart\App\Models\TaxRate::where('country', 'HU')->get();
+    foreach ($taxRates as $rate) {
+        $rate->for_shipping = $vatRate;
+        $rate->save();
+    }
+}
+
+function getShippingTaxRates() {
+    $taxRates = FluentCart\App\Models\TaxRate::where('country', 'HU')->get();
+    $rates = [];
+    
+    foreach ($taxRates as $taxRate) {
+        // Use for_shipping if not null, otherwise use rate
+        $rate = $taxRate->for_shipping !== null ? $taxRate->for_shipping : $taxRate->rate;
+        $rates[] = $rate;
+    }
+    
+    // Return only distinct values
+    return array_values(array_unique($rates));
+}
