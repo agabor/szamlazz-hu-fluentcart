@@ -928,7 +928,7 @@ function create_invoice($order, $main_order = null) {
 }, 1);
 
 function setShippingTaxRate($vatRate) {
-    $taxRates = FluentCart\App\Models\TaxRate::where('country', 'HU')->get();
+    $taxRates = TaxRate::where('country', 'HU')->get();
     foreach ($taxRates as $rate) {
         $rate->for_shipping = $vatRate;
         $rate->save();
@@ -936,7 +936,7 @@ function setShippingTaxRate($vatRate) {
 }
 
 function getShippingTaxRates() {
-    $taxRates = FluentCart\App\Models\TaxRate::where('country', 'HU')->get();
+    $taxRates = TaxRate::where('country', 'HU')->get();
     $rates = [];
     
     foreach ($taxRates as $taxRate) {
