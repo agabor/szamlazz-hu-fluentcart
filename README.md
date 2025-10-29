@@ -29,6 +29,7 @@ A WordPress plugin that automatically generates invoices on Számlázz.hu for Fl
 3. **Consult with your accountant** to ensure the plugin meets your accounting requirements
 4. **Review all generated invoices** for accuracy (amounts, VAT calculations, company data)
 5. **Test all edge cases** relevant to your business (B2B sales, different VAT rates, etc.)
+6. **Read about limitations** [bellow](#limitations)
 
 **This plugin generates official accounting documents. Incorrect invoices can have legal and tax implications. Always test thoroughly and get professional accounting advice before going live.**
 
@@ -176,6 +177,9 @@ Please be aware of the following limitations:
 - Due to the way FluentCart calculates shipping VAT, **minor rounding errors may appear** on the web UI
 - The shipping VAT on the **invoice is calculated correctly** according to Számlázz.hu standards
 - This is a display-only issue and does not affect the accuracy of the generated invoice
+
+### Instant Payment Notification
+- [Instant Payment Notification (IPN)](https://tudastar.szamlazz.hu/gyik/mi-az-ipn) is not yet supported.
 
 ## Troubleshooting
 
