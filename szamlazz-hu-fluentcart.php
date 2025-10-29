@@ -24,6 +24,7 @@ use \SzamlaAgent\SzamlaAgentAPI;
 use \SzamlaAgent\SzamlaAgentUtil;
 use \SzamlaAgent\Buyer;
 use \SzamlaAgent\Seller;
+use \SzamlaAgent\Language;
 use \SzamlaAgent\Document\Invoice\Invoice;
 use \SzamlaAgent\Item\InvoiceItem;
 
@@ -226,6 +227,18 @@ function get_pdf_path($invoice_number) {
             return in_array((int)$value, $allowed) ? (int)$value : 27;
         }
     ]);
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_invoice_language', [
+        'type' => 'string',
+        'default' => Language::LANGUAGE_HU,
+        'sanitize_callback' => function($value) {
+            try {
+                $allowed = Language::getAll();
+                return in_array($value, $allowed) ? $value : Language::LANGUAGE_HU;
+            } catch (\Exception $e) {
+                return Language::LANGUAGE_HU;
+            }
+        }
+    ]);
     
     // Handle clear cache action
     if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
@@ -305,6 +318,45 @@ function get_pdf_path($invoice_number) {
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_shipping_section'
+    );
+    
+    \add_settings_section(
+        'szamlazz_hu_invoice_section',
+        'Invoice Settings',
+        function() {
+            echo '<p>Configure invoice generation settings.</p>';
+        },
+        'szamlazz-hu-fluentcart'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_invoice_language',
+        'Invoice Language',
+        function() {
+            $value = \get_option('szamlazz_hu_invoice_language', Language::LANGUAGE_HU);
+            $languages = [
+                Language::LANGUAGE_HU => 'Magyar (Hungarian)',
+                Language::LANGUAGE_EN => 'English',
+                Language::LANGUAGE_DE => 'Deutsch (German)',
+                Language::LANGUAGE_IT => 'Italiano (Italian)',
+                Language::LANGUAGE_RO => 'Română (Romanian)',
+                Language::LANGUAGE_SK => 'Slovenčina (Slovak)',
+                Language::LANGUAGE_HR => 'Hrvatski (Croatian)',
+                Language::LANGUAGE_FR => 'Français (French)',
+                Language::LANGUAGE_ES => 'Español (Spanish)',
+                Language::LANGUAGE_CZ => 'Čeština (Czech)',
+                Language::LANGUAGE_PL => 'Polski (Polish)'
+            ];
+            echo '<select name="szamlazz_hu_invoice_language">';
+            foreach ($languages as $code => $name) {
+                $selected = ($code == $value) ? 'selected' : '';
+                echo '<option value="' . \esc_attr($code) . '" ' . $selected . '>' . \esc_html($name) . '</option>';
+            }
+            echo '</select>';
+            echo '<p class="description">Select the language for generated invoices</p>';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_invoice_section'
     );
     
     \add_settings_section(
@@ -801,6 +853,12 @@ function generate_invoice($order) {
     $invoice->setBuyer($buyer);
     $invoice->setSeller($seller);
     $invoice->getHeader()->setCurrency($order->currency);
+    
+    // Get invoice language from settings
+    $invoice_language = \get_option('szamlazz_hu_invoice_language', Language::LANGUAGE_HU);
+    $invoice->getHeader()->setLanguage($invoice_language);
+    
+    debug_log($order_id, 'Invoice language set to', $invoice_language);
     
     // Add order items to invoice
     add_order_items($invoice, $order);
