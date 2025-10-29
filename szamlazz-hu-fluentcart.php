@@ -18,6 +18,11 @@ if (!\defined('ABSPATH')) {
     exit;
 }
 
+// Load plugin textdomain
+\add_action('plugins_loaded', function() {
+    \load_plugin_textdomain('szamlazz-hu-fluentcart', false, dirname(\plugin_basename(__FILE__)) . '/languages/');
+});
+
 require __DIR__ . DIRECTORY_SEPARATOR .'autoload.php';
 
 use \SzamlaAgent\SzamlaAgentAPI;
@@ -243,14 +248,14 @@ function get_pdf_path($invoice_number) {
     // Handle clear cache action
     if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
         clear_cache();
-        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', 'Cache cleared successfully', 'updated');
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_cache_cleared', \__('Cache cleared successfully', 'szamlazz-hu-fluentcart'), 'updated');
     }
     
     // Handle apply shipping VAT action
     if (isset($_POST['szamlazz_hu_apply_shipping_vat']) && \check_admin_referer('szamlazz_hu_apply_shipping_vat_action', 'szamlazz_hu_apply_shipping_vat_nonce')) {
         $shipping_vat = \get_option('szamlazz_hu_shipping_vat', 27);
         setShippingTaxRate($shipping_vat);
-        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_vat_applied', 'Shipping VAT rate applied to all tax rates successfully', 'updated');
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_vat_applied', \__('Shipping VAT rate applied to all tax rates successfully', 'szamlazz-hu-fluentcart'), 'updated');
     }
     
     \add_settings_section(
