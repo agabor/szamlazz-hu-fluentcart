@@ -273,7 +273,7 @@ function get_pdf_path($invoice_number) {
         function() {
             $value = \get_option('szamlazz_hu_agent_api_key', '');
             echo '<input type="password" name="szamlazz_hu_agent_api_key" value="' . \esc_attr($value) . '" class="regular-text" autocomplete="off" />';
-            echo '<p class="description">' . \esc_html__('Your Számlázz.hu Agent API Key', 'szamlazz-hu-fluentcart') . '</p>';
+            echo '<p class="description"><a href="https://tudastar.szamlazz.hu/gyik/kulcs" target="_blank" rel="noopener noreferrer">' . \esc_html__('What is this?', 'szamlazz-hu-fluentcart') . '</a></p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_api_section'
@@ -300,7 +300,6 @@ function get_pdf_path($invoice_number) {
                 echo '<option value="' . \esc_attr($option) . '" ' . $selected . '>' . \esc_html($option) . '%</option>';
             }
             echo '</select>';
-            echo '<p class="description">' . \esc_html__('Select the VAT rate to apply to shipping', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_shipping_section'
@@ -328,9 +327,7 @@ function get_pdf_path($invoice_number) {
     \add_settings_section(
         'szamlazz_hu_invoice_section',
         \__('Invoice Settings', 'szamlazz-hu-fluentcart'),
-        function() {
-            echo '<p>' . \esc_html__('Configure invoice generation settings.', 'szamlazz-hu-fluentcart') . '</p>';
-        },
+        null,
         'szamlazz-hu-fluentcart'
     );
     
@@ -358,7 +355,6 @@ function get_pdf_path($invoice_number) {
                 echo '<option value="' . \esc_attr($code) . '" ' . $selected . '>' . \esc_html($name) . '</option>';
             }
             echo '</select>';
-            echo '<p class="description">' . \esc_html__('Select the language for generated invoices', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_invoice_section'

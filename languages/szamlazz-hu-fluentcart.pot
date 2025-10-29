@@ -35,7 +35,7 @@ msgid "Agent API Key"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
-msgid "Your Számlázz.hu Agent API Key"
+msgid "What is this?"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
