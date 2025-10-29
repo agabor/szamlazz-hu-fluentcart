@@ -260,20 +260,20 @@ function get_pdf_path($invoice_number) {
     
     \add_settings_section(
         'szamlazz_hu_api_section',
-        'API Settings',
+        \__('API Settings', 'szamlazz-hu-fluentcart'),
         function() {
-            echo '<p>Enter your Számlázz.hu API credentials below.</p>';
+            echo '<p>' . \esc_html__('Enter your Számlázz.hu API credentials below.', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart'
     );
     
     \add_settings_field(
         'szamlazz_hu_agent_api_key',
-        'Agent API Key',
+        \__('Agent API Key', 'szamlazz-hu-fluentcart'),
         function() {
             $value = \get_option('szamlazz_hu_agent_api_key', '');
             echo '<input type="text" name="szamlazz_hu_agent_api_key" value="' . \esc_attr($value) . '" class="regular-text" />';
-            echo '<p class="description">Your Számlázz.hu Agent API Key</p>';
+            echo '<p class="description">' . \esc_html__('Your Számlázz.hu Agent API Key', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_api_section'
@@ -281,16 +281,16 @@ function get_pdf_path($invoice_number) {
     
     \add_settings_section(
         'szamlazz_hu_shipping_section',
-        'Shipping VAT Settings',
+        \__('Shipping VAT Settings', 'szamlazz-hu-fluentcart'),
         function() {
-            echo '<p>Configure the VAT rate for shipping.</p>';
+            echo '<p>' . \esc_html__('Configure the VAT rate for shipping.', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart'
     );
     
     \add_settings_field(
         'szamlazz_hu_shipping_vat',
-        'Shipping VAT Rate',
+        \__('Shipping VAT Rate', 'szamlazz-hu-fluentcart'),
         function() {
             $value = \get_option('szamlazz_hu_shipping_vat', 27);
             $options = [0, 5, 18, 27];
@@ -300,7 +300,7 @@ function get_pdf_path($invoice_number) {
                 echo '<option value="' . \esc_attr($option) . '" ' . $selected . '>' . \esc_html($option) . '%</option>';
             }
             echo '</select>';
-            echo '<p class="description">Select the VAT rate to apply to shipping</p>';
+            echo '<p class="description">' . \esc_html__('Select the VAT rate to apply to shipping', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_shipping_section'
@@ -308,17 +308,17 @@ function get_pdf_path($invoice_number) {
     
     \add_settings_field(
         'szamlazz_hu_apply_shipping_vat_field',
-        'Apply to Tax Rates',
+        \__('Apply to Tax Rates', 'szamlazz-hu-fluentcart'),
         function() {
             $current_rates = getShippingTaxRates();
             $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
             
             if (empty($current_rates)) {
-                echo '<p class="description" style="color: #dc3232;"><strong>Warning:</strong> No tax rates found. Please configure tax rates in FluentCart first.</p>';
+                echo '<p class="description" style="color: #dc3232;"><strong>' . \esc_html__('Warning:', 'szamlazz-hu-fluentcart') . '</strong> ' . \esc_html__('No tax rates found. Please configure tax rates in FluentCart first.', 'szamlazz-hu-fluentcart') . '</p>';
             } elseif (count($current_rates) === 1 && $current_rates[0] == $selected_vat) {
-                echo '<p class="description" style="color: #46b450;">All tax rates are already set to ' . \esc_html($selected_vat) . '%</p>';
+                echo '<p class="description" style="color: #46b450;">' . \esc_html__('All tax rates are already set to', 'szamlazz-hu-fluentcart') . ' ' . \esc_html($selected_vat) . '%</p>';
             } else {
-                echo '<p class="description">Current shipping VAT rates in use: ' . \esc_html(\implode(', ', $current_rates)) . '%</p>';
+                echo '<p class="description">' . \esc_html__('Current shipping VAT rates in use:', 'szamlazz-hu-fluentcart') . ' ' . \esc_html(\implode(', ', $current_rates)) . '%</p>';
             }
         },
         'szamlazz-hu-fluentcart',
@@ -327,30 +327,30 @@ function get_pdf_path($invoice_number) {
     
     \add_settings_section(
         'szamlazz_hu_invoice_section',
-        'Invoice Settings',
+        \__('Invoice Settings', 'szamlazz-hu-fluentcart'),
         function() {
-            echo '<p>Configure invoice generation settings.</p>';
+            echo '<p>' . \esc_html__('Configure invoice generation settings.', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart'
     );
     
     \add_settings_field(
         'szamlazz_hu_invoice_language',
-        'Invoice Language',
+        \__('Invoice Language', 'szamlazz-hu-fluentcart'),
         function() {
             $value = \get_option('szamlazz_hu_invoice_language', Language::LANGUAGE_HU);
             $languages = [
-                Language::LANGUAGE_HU => 'Magyar (Hungarian)',
-                Language::LANGUAGE_EN => 'English',
-                Language::LANGUAGE_DE => 'Deutsch (German)',
-                Language::LANGUAGE_IT => 'Italiano (Italian)',
-                Language::LANGUAGE_RO => 'Română (Romanian)',
-                Language::LANGUAGE_SK => 'Slovenčina (Slovak)',
-                Language::LANGUAGE_HR => 'Hrvatski (Croatian)',
-                Language::LANGUAGE_FR => 'Français (French)',
-                Language::LANGUAGE_ES => 'Español (Spanish)',
-                Language::LANGUAGE_CZ => 'Čeština (Czech)',
-                Language::LANGUAGE_PL => 'Polski (Polish)'
+                Language::LANGUAGE_HU => \__('Magyar (Hungarian)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_EN => \__('English', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_DE => \__('Deutsch (German)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_IT => \__('Italiano (Italian)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_RO => \__('Română (Romanian)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_SK => \__('Slovenčina (Slovak)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_HR => \__('Hrvatski (Croatian)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_FR => \__('Français (French)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_ES => \__('Español (Spanish)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_CZ => \__('Čeština (Czech)', 'szamlazz-hu-fluentcart'),
+                Language::LANGUAGE_PL => \__('Polski (Polish)', 'szamlazz-hu-fluentcart')
             ];
             echo '<select name="szamlazz_hu_invoice_language">';
             foreach ($languages as $code => $name) {
@@ -358,7 +358,7 @@ function get_pdf_path($invoice_number) {
                 echo '<option value="' . \esc_attr($code) . '" ' . $selected . '>' . \esc_html($name) . '</option>';
             }
             echo '</select>';
-            echo '<p class="description">Select the language for generated invoices</p>';
+            echo '<p class="description">' . \esc_html__('Select the language for generated invoices', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_invoice_section'
@@ -366,20 +366,20 @@ function get_pdf_path($invoice_number) {
     
     \add_settings_section(
         'szamlazz_hu_cache_section',
-        'Cache Management',
+        \__('Cache Management', 'szamlazz-hu-fluentcart'),
         function() {
             $cache_size = get_cache_size();
             $formatted_size = format_bytes($cache_size);
-            echo '<p>Current cache size: <strong>' . esc_html($formatted_size) . '</strong></p>';
+            echo '<p>' . \esc_html__('Current cache size:', 'szamlazz-hu-fluentcart') . ' <strong>' . esc_html($formatted_size) . '</strong></p>';
         },
         'szamlazz-hu-fluentcart'
     );
     
     \add_settings_field(
         'szamlazz_hu_clear_cache_field',
-        'Clear Cache',
+        \__('Clear Cache', 'szamlazz-hu-fluentcart'),
         function() {
-            echo '<p class="description">Clearing the cache will delete all cached PDFs, XMLs, and logs.</p>';
+            echo '<p class="description">' . \esc_html__('Clearing the cache will delete all cached PDFs, XMLs, and logs.', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_cache_section'
@@ -408,7 +408,7 @@ function settings_page() {
     }
     
     if (isset($_GET['settings-updated'])) {
-        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_message', 'Settings Saved', 'updated');
+        \add_settings_error('szamlazz_hu_messages', 'szamlazz_hu_message', \__('Settings Saved', 'szamlazz-hu-fluentcart'), 'updated');
     }
     
     \settings_errors('szamlazz_hu_messages');
@@ -421,10 +421,10 @@ function settings_page() {
             <?php
             \settings_fields('szamlazz_hu_fluentcart_settings');
             \do_settings_sections('szamlazz-hu-fluentcart');
-            \submit_button('Save Settings');
+            \submit_button(\__('Save Settings', 'szamlazz-hu-fluentcart'));
             ?>
         </form>
-        <h1>Actions</h1>
+        <h1><?php echo \esc_html__('Actions', 'szamlazz-hu-fluentcart'); ?></h1>
         
         <!-- Apply Shipping VAT Form -->
         <?php
@@ -435,14 +435,14 @@ function settings_page() {
         <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
             <?php \wp_nonce_field('szamlazz_hu_apply_shipping_vat_action', 'szamlazz_hu_apply_shipping_vat_nonce'); ?>
             <input type="hidden" name="szamlazz_hu_apply_shipping_vat" value="1" />
-            <?php \submit_button('Apply Shipping VAT to All Tax Rates', 'primary', 'submit', false, $is_button_disabled ? ['disabled' => true] : []); ?>
+            <?php \submit_button(\__('Apply Shipping VAT to All Tax Rates', 'szamlazz-hu-fluentcart'), 'primary', 'submit', false, $is_button_disabled ? ['disabled' => true] : []); ?>
         </form>
         
         <!-- Clear Cache Form -->
         <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
             <?php \wp_nonce_field('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce'); ?>
             <input type="hidden" name="szamlazz_hu_clear_cache" value="1" />
-            <?php \submit_button('Clear Cache', 'secondary', 'submit', false); ?>
+            <?php \submit_button(\__('Clear Cache', 'szamlazz-hu-fluentcart'), 'secondary', 'submit', false); ?>
         </form>
     </div>
     <?php
