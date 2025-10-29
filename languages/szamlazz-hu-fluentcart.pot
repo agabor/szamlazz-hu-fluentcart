@@ -11,6 +11,10 @@ msgstr ""
 "Language-Team: \n"
 
 #: szamlazz-hu-fluentcart.php
+msgid "Számlázz.hu FluentCart Settings"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
 msgid "Settings"
 msgstr ""
 

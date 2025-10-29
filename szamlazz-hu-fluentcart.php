@@ -211,7 +211,7 @@ function get_pdf_path($invoice_number) {
  */
 \add_action('admin_menu', function() {
     \add_options_page(
-        'Számlázz.hu FluentCart Settings',
+        \__('Számlázz.hu FluentCart Settings', 'szamlazz-hu-fluentcart'),
         'Számlázz.hu',
         'manage_options',
         'szamlazz-hu-fluentcart',
@@ -272,7 +272,7 @@ function get_pdf_path($invoice_number) {
         \__('Agent API Key', 'szamlazz-hu-fluentcart'),
         function() {
             $value = \get_option('szamlazz_hu_agent_api_key', '');
-            echo '<input type="text" name="szamlazz_hu_agent_api_key" value="' . \esc_attr($value) . '" class="regular-text" />';
+            echo '<input type="password" name="szamlazz_hu_agent_api_key" value="' . \esc_attr($value) . '" class="regular-text" autocomplete="off" />';
             echo '<p class="description">' . \esc_html__('Your Számlázz.hu Agent API Key', 'szamlazz-hu-fluentcart') . '</p>';
         },
         'szamlazz-hu-fluentcart',
