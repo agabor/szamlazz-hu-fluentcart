@@ -370,16 +370,6 @@ function get_pdf_path($invoice_number) {
         },
         'szamlazz-hu-fluentcart'
     );
-    
-    \add_settings_field(
-        'szamlazz_hu_clear_cache_field',
-        \__('Clear Cache', 'szamlazz-hu-fluentcart'),
-        function() {
-            echo '<p class="description">' . \esc_html__('Clearing the cache will delete all cached PDFs, XMLs, and logs.', 'szamlazz-hu-fluentcart') . '</p>';
-        },
-        'szamlazz-hu-fluentcart',
-        'szamlazz_hu_cache_section'
-    );
 });
 
 /**
@@ -433,6 +423,15 @@ function settings_page() {
             <input type="hidden" name="szamlazz_hu_apply_shipping_vat" value="1" />
             <?php \submit_button(\__('Apply Shipping VAT to All Tax Rates', 'szamlazz-hu-fluentcart'), 'primary', 'submit', false, $is_button_disabled ? ['disabled' => true] : []); ?>
         </form>
+        
+        <!-- Cache Management Section -->
+        <h2><?php echo \esc_html__('Cache Management', 'szamlazz-hu-fluentcart'); ?></h2>
+        <?php
+        $cache_size = get_cache_size();
+        $formatted_size = format_bytes($cache_size);
+        ?>
+        <p><?php echo \esc_html__('Current cache size:', 'szamlazz-hu-fluentcart'); ?> <strong><?php echo \esc_html($formatted_size); ?></strong></p>
+        <p class="description"><?php echo \esc_html__('Clearing the cache will delete all cached PDFs, XMLs, and logs.', 'szamlazz-hu-fluentcart'); ?></p>
         
         <!-- Clear Cache Form -->
         <form action="<?php echo \esc_url(\admin_url('options-general.php?page=szamlazz-hu-fluentcart')); ?>" method="post" style="margin-top: 20px;">
