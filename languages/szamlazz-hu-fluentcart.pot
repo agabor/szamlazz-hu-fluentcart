@@ -83,6 +83,14 @@ msgid "E-Invoice"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
+msgid "Quantity Unit"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
+msgid "Shipping Title"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
 msgid "Magyar (Hungarian)"
 msgstr ""
 

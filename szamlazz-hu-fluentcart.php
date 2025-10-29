@@ -252,6 +252,16 @@ function get_pdf_path($invoice_number) {
             return in_array((int)$value, $allowed) ? (int)$value : Invoice::INVOICE_TYPE_P_INVOICE;
         }
     ]);
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_quantity_unit', [
+        'type' => 'string',
+        'default' => 'db',
+        'sanitize_callback' => 'sanitize_text_field'
+    ]);
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_shipping_title', [
+        'type' => 'string',
+        'default' => 'Szállítás',
+        'sanitize_callback' => 'sanitize_text_field'
+    ]);
     
     // Handle clear cache action
     if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
@@ -338,6 +348,28 @@ function get_pdf_path($invoice_number) {
                 echo '<option value="' . \esc_attr($type_value) . '" ' . $selected . '>' . \esc_html($type_name) . '</option>';
             }
             echo '</select>';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_invoice_section'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_quantity_unit',
+        \__('Quantity Unit', 'szamlazz-hu-fluentcart'),
+        function() {
+            $value = \get_option('szamlazz_hu_quantity_unit', 'db');
+            echo '<input type="text" name="szamlazz_hu_quantity_unit" value="' . \esc_attr($value) . '" class="regular-text" />';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_invoice_section'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_shipping_title',
+        \__('Shipping Title', 'szamlazz-hu-fluentcart'),
+        function() {
+            $value = \get_option('szamlazz_hu_shipping_title', 'Szállítás');
+            echo '<input type="text" name="szamlazz_hu_shipping_title" value="' . \esc_attr($value) . '" class="regular-text" />';
         },
         'szamlazz-hu-fluentcart',
         'szamlazz_hu_invoice_section'
@@ -695,6 +727,9 @@ function add_order_items($invoice, $order) {
         throw new \Exception("No items found for order $order_id");
     }
     
+    // Get quantity unit from settings
+    $quantity_unit = \get_option('szamlazz_hu_quantity_unit', 'db');
+    
     debug_log($order_id, 'Adding order items', 'Item count', $items->count());
     
     foreach ($items as $order_item) {
@@ -709,7 +744,7 @@ function add_order_items($invoice, $order) {
             $order_item->title,
             $order_item->unit_price / 100,
             $order_item->quantity,
-            'db',
+            $quantity_unit,
             strval($taxRate)
         );
         
@@ -742,9 +777,10 @@ function add_order_items($invoice, $order) {
         $invoice->addItem($item);
     }
     if ($order->shipping_total != 0) {
-        $item = null;
-
-        $item = new InvoiceItem("Shipping", $order->shipping_total / 100);
+        // Get shipping title from settings
+        $shipping_title = \get_option('szamlazz_hu_shipping_title', 'Szállítás');
+        
+        $item = new InvoiceItem($shipping_title, $order->shipping_total / 100);
         $item->setNetPrice($order->shipping_total / 100);
         if ($order->tax_behavior != 0) {
             // Get shipping VAT rate from settings
