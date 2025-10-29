@@ -79,6 +79,18 @@ msgid "Invoice Language"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
+msgid "Invoice Type"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
+msgid "Paper Invoice"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
+msgid "E-Invoice"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
 msgid "Magyar (Hungarian)"
 msgstr ""
 

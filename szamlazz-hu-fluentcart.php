@@ -244,6 +244,14 @@ function get_pdf_path($invoice_number) {
             }
         }
     ]);
+    \register_setting('szamlazz_hu_fluentcart_settings', 'szamlazz_hu_invoice_type', [
+        'type' => 'integer',
+        'default' => Invoice::INVOICE_TYPE_P_INVOICE,
+        'sanitize_callback' => function($value) {
+            $allowed = [Invoice::INVOICE_TYPE_P_INVOICE, Invoice::INVOICE_TYPE_E_INVOICE];
+            return in_array((int)$value, $allowed) ? (int)$value : Invoice::INVOICE_TYPE_P_INVOICE;
+        }
+    ]);
     
     // Handle clear cache action
     if (isset($_POST['szamlazz_hu_clear_cache']) && \check_admin_referer('szamlazz_hu_clear_cache_action', 'szamlazz_hu_clear_cache_nonce')) {
@@ -353,6 +361,26 @@ function get_pdf_path($invoice_number) {
             foreach ($languages as $code => $name) {
                 $selected = ($code == $value) ? 'selected' : '';
                 echo '<option value="' . \esc_attr($code) . '" ' . $selected . '>' . \esc_html($name) . '</option>';
+            }
+            echo '</select>';
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_invoice_section'
+    );
+    
+    \add_settings_field(
+        'szamlazz_hu_invoice_type',
+        \__('Invoice Type', 'szamlazz-hu-fluentcart'),
+        function() {
+            $value = \get_option('szamlazz_hu_invoice_type', Invoice::INVOICE_TYPE_P_INVOICE);
+            $types = [
+                Invoice::INVOICE_TYPE_P_INVOICE => \__('Paper Invoice', 'szamlazz-hu-fluentcart'),
+                Invoice::INVOICE_TYPE_E_INVOICE => \__('E-Invoice', 'szamlazz-hu-fluentcart')
+            ];
+            echo '<select name="szamlazz_hu_invoice_type">';
+            foreach ($types as $type_value => $type_name) {
+                $selected = ($type_value == $value) ? 'selected' : '';
+                echo '<option value="' . \esc_attr($type_value) . '" ' . $selected . '>' . \esc_html($type_name) . '</option>';
             }
             echo '</select>';
         },
@@ -848,8 +876,11 @@ function generate_invoice($order) {
     // Create seller with email settings
     $seller = create_seller($order_id);
     
+    // Get invoice type from settings
+    $invoice_type = \get_option('szamlazz_hu_invoice_type', Invoice::INVOICE_TYPE_P_INVOICE);
+    
     // Create invoice
-    $invoice = new Invoice(Invoice::INVOICE_TYPE_P_INVOICE);
+    $invoice = new Invoice($invoice_type);
     $invoice->setBuyer($buyer);
     $invoice->setSeller($seller);
     $invoice->getHeader()->setCurrency($order->currency);
@@ -858,6 +889,8 @@ function generate_invoice($order) {
     $invoice_language = \get_option('szamlazz_hu_invoice_language', Language::LANGUAGE_HU);
     $invoice->getHeader()->setLanguage($invoice_language);
     
+    $invoice_type_name = ($invoice_type == Invoice::INVOICE_TYPE_E_INVOICE) ? 'E-Invoice' : 'Paper Invoice';
+    debug_log($order_id, 'Invoice type set to', $invoice_type_name);
     debug_log($order_id, 'Invoice language set to', $invoice_language);
     
     // Add order items to invoice
