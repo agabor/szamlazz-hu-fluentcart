@@ -51,10 +51,6 @@ msgid "Shipping VAT Rate"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
-msgid "Select the VAT rate to apply to shipping"
-msgstr ""
-
-#: szamlazz-hu-fluentcart.php
 msgid "Apply to Tax Rates"
 msgstr ""
 
@@ -76,10 +72,6 @@ msgstr ""
 
 #: szamlazz-hu-fluentcart.php
 msgid "Invoice Settings"
-msgstr ""
-
-#: szamlazz-hu-fluentcart.php
-msgid "Configure invoice generation settings."
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
@@ -128,10 +120,6 @@ msgstr ""
 
 #: szamlazz-hu-fluentcart.php
 msgid "Polski (Polish)"
-msgstr ""
-
-#: szamlazz-hu-fluentcart.php
-msgid "Select the language for generated invoices"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php

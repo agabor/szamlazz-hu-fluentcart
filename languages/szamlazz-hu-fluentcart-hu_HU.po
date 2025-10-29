@@ -55,10 +55,6 @@ msgid "Shipping VAT Rate"
 msgstr "Szállítási áfa mérték"
 
 #: szamlazz-hu-fluentcart.php
-msgid "Select the VAT rate to apply to shipping"
-msgstr "Válaszd ki a szállításra alkalmazandó áfa mértéket"
-
-#: szamlazz-hu-fluentcart.php
 msgid "Apply to Tax Rates"
 msgstr "Alkalmazás az adómértékekre"
 
@@ -81,10 +77,6 @@ msgstr "Jelenleg használt szállítási áfa mértékek:"
 #: szamlazz-hu-fluentcart.php
 msgid "Invoice Settings"
 msgstr "Számla beállítások"
-
-#: szamlazz-hu-fluentcart.php
-msgid "Configure invoice generation settings."
-msgstr "Állítsd be a számlakiállítási beállításokat."
 
 #: szamlazz-hu-fluentcart.php
 msgid "Invoice Language"
@@ -133,10 +125,6 @@ msgstr "Cseh"
 #: szamlazz-hu-fluentcart.php
 msgid "Polski (Polish)"
 msgstr "Lengyel"
-
-#: szamlazz-hu-fluentcart.php
-msgid "Select the language for generated invoices"
-msgstr "Válaszd ki a generált számlák nyelvét"
 
 #: szamlazz-hu-fluentcart.php
 msgid "Cache Management"
