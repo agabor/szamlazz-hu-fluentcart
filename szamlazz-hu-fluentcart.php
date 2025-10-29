@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Számlázz.hu FluentCart Integration
+ * Plugin Name: Számlázz.hu for FluentCart
  * Plugin URI: https://webshop.tech/szamlazz-hu-fluentcart
  * Description: Generates invoices on Számlázz.hu for FluentCart orders
  * Version: 0.0.1
@@ -211,7 +211,7 @@ function get_pdf_path($invoice_number) {
  */
 \add_action('admin_menu', function() {
     \add_options_page(
-        \__('Számlázz.hu FluentCart Settings', 'szamlazz-hu-fluentcart'),
+        \__('Számlázz.hu for FluentCart Settings', 'szamlazz-hu-fluentcart'),
         'Számlázz.hu',
         'manage_options',
         'szamlazz-hu-fluentcart',
@@ -452,6 +452,8 @@ function settings_page() {
             ?>
         </form>
         <h1><?php echo \esc_html__('Actions', 'szamlazz-hu-fluentcart'); ?></h1>
+        
+        <h2><?php echo \esc_html__('Shipping VAT Settings', 'szamlazz-hu-fluentcart'); ?></h2>
         
         <!-- Apply Shipping VAT Form -->
         <?php
@@ -864,7 +866,7 @@ function debug_log($order_id, $message, ...$args) {
     ]);
     
     // Write to debug.log file
-    \error_log('[Számlázz.hu FluentCart - Order #' . $order_id . '] ' . $formatted_message);
+    \error_log('[Számlázz.hu for FluentCart - Order #' . $order_id . '] ' . $formatted_message);
 }
 
 function generate_invoice($order) {

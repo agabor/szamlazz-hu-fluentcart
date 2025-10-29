@@ -1,8 +1,8 @@
 # Copyright (C) 2025 Gábor Angyal
-# This file is distributed under the same license as the Számlázz.hu FluentCart Integration plugin.
+# This file is distributed under the same license as the Számlázz.hu for FluentCart plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Számlázz.hu FluentCart Integration 0.0.1\n"
+"Project-Id-Version: Számlázz.hu for FluentCart 0.0.1\n"
 "Report-Msgid-Bugs-To: https://webshop.tech\n"
 "POT-Creation-Date: 2025-10-29 13:41:00+0000\n"
 "MIME-Version: 1.0\n"
@@ -11,7 +11,7 @@ msgstr ""
 "Language-Team: \n"
 
 #: szamlazz-hu-fluentcart.php
-msgid "Számlázz.hu FluentCart Settings"
+msgid "Számlázz.hu for FluentCart Settings"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
@@ -160,6 +160,10 @@ msgstr ""
 
 #: szamlazz-hu-fluentcart.php
 msgid "Actions"
+msgstr ""
+
+#: szamlazz-hu-fluentcart.php
+msgid "Shipping VAT Settings"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php

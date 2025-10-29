@@ -1,8 +1,8 @@
 # Copyright (C) 2025 Gábor Angyal
-# This file is distributed under the same license as the Számlázz.hu FluentCart Integration plugin.
+# This file is distributed under the same license as the Számlázz.hu for FluentCart Integration plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Számlázz.hu FluentCart Integration 0.0.1\n"
+"Project-Id-Version: Számlázz.hu for FluentCart Integration 0.0.1\n"
 "Report-Msgid-Bugs-To: https://webshop.tech\n"
 "POT-Creation-Date: 2025-10-29 13:41:00+0000\n"
 "PO-Revision-Date: 2025-10-29 13:41:00+0000\n"
@@ -15,8 +15,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: szamlazz-hu-fluentcart.php
-msgid "Számlázz.hu FluentCart Settings"
-msgstr "Számlázz.hu FluentCart beállítások"
+msgid "Számlázz.hu for FluentCart Settings"
+msgstr "Számlázz.hu for FluentCart Beállítások"
 
 #: szamlazz-hu-fluentcart.php
 msgid "Settings"
@@ -165,6 +165,10 @@ msgstr "Beállítások mentése"
 #: szamlazz-hu-fluentcart.php
 msgid "Actions"
 msgstr "Műveletek"
+
+#: szamlazz-hu-fluentcart.php
+msgid "Shipping VAT Settings"
+msgstr "Szállítási ÁFA beállítása"
 
 #: szamlazz-hu-fluentcart.php
 msgid "Apply Shipping VAT to All Tax Rates"
