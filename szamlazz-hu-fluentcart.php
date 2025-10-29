@@ -288,51 +288,6 @@ function get_pdf_path($invoice_number) {
     );
     
     \add_settings_section(
-        'szamlazz_hu_shipping_section',
-        \__('Shipping VAT Settings', 'szamlazz-hu-fluentcart'),
-        function() {
-            echo '<p>' . \esc_html__('Configure the VAT rate for shipping.', 'szamlazz-hu-fluentcart') . '</p>';
-        },
-        'szamlazz-hu-fluentcart'
-    );
-    
-    \add_settings_field(
-        'szamlazz_hu_shipping_vat',
-        \__('Shipping VAT Rate', 'szamlazz-hu-fluentcart'),
-        function() {
-            $value = \get_option('szamlazz_hu_shipping_vat', 27);
-            $options = [0, 5, 18, 27];
-            echo '<select name="szamlazz_hu_shipping_vat">';
-            foreach ($options as $option) {
-                $selected = ($option == $value) ? 'selected' : '';
-                echo '<option value="' . \esc_attr($option) . '" ' . $selected . '>' . \esc_html($option) . '%</option>';
-            }
-            echo '</select>';
-        },
-        'szamlazz-hu-fluentcart',
-        'szamlazz_hu_shipping_section'
-    );
-    
-    \add_settings_field(
-        'szamlazz_hu_apply_shipping_vat_field',
-        \__('Apply to Tax Rates', 'szamlazz-hu-fluentcart'),
-        function() {
-            $current_rates = getShippingTaxRates();
-            $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
-            
-            if (empty($current_rates)) {
-                echo '<p class="description" style="color: #dc3232;"><strong>' . \esc_html__('Warning:', 'szamlazz-hu-fluentcart') . '</strong> ' . \esc_html__('No tax rates found. Please configure tax rates in FluentCart first.', 'szamlazz-hu-fluentcart') . '</p>';
-            } elseif (count($current_rates) === 1 && $current_rates[0] == $selected_vat) {
-                echo '<p class="description" style="color: #46b450;">' . \esc_html__('All tax rates are already set to', 'szamlazz-hu-fluentcart') . ' ' . \esc_html($selected_vat) . '%</p>';
-            } else {
-                echo '<p class="description">' . \esc_html__('Current shipping VAT rates in use:', 'szamlazz-hu-fluentcart') . ' ' . \esc_html(\implode(', ', $current_rates)) . '%</p>';
-            }
-        },
-        'szamlazz-hu-fluentcart',
-        'szamlazz_hu_shipping_section'
-    );
-    
-    \add_settings_section(
         'szamlazz_hu_invoice_section',
         \__('Invoice Settings', 'szamlazz-hu-fluentcart'),
         null,
@@ -388,16 +343,42 @@ function get_pdf_path($invoice_number) {
         'szamlazz_hu_invoice_section'
     );
     
-    \add_settings_section(
-        'szamlazz_hu_cache_section',
-        \__('Cache Management', 'szamlazz-hu-fluentcart'),
+    \add_settings_field(
+        'szamlazz_hu_shipping_vat',
+        \__('Shipping VAT Rate', 'szamlazz-hu-fluentcart'),
         function() {
-            $cache_size = get_cache_size();
-            $formatted_size = format_bytes($cache_size);
-            echo '<p>' . \esc_html__('Current cache size:', 'szamlazz-hu-fluentcart') . ' <strong>' . esc_html($formatted_size) . '</strong></p>';
+            $value = \get_option('szamlazz_hu_shipping_vat', 27);
+            $options = [0, 5, 18, 27];
+            echo '<select name="szamlazz_hu_shipping_vat">';
+            foreach ($options as $option) {
+                $selected = ($option == $value) ? 'selected' : '';
+                echo '<option value="' . \esc_attr($option) . '" ' . $selected . '>' . \esc_html($option) . '%</option>';
+            }
+            echo '</select>';
         },
-        'szamlazz-hu-fluentcart'
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_shipping_section'
     );
+    
+    \add_settings_field(
+        'szamlazz_hu_apply_shipping_vat_field',
+        \__('Apply to Tax Rates', 'szamlazz-hu-fluentcart'),
+        function() {
+            $current_rates = getShippingTaxRates();
+            $selected_vat = \get_option('szamlazz_hu_shipping_vat', 27);
+            
+            if (empty($current_rates)) {
+                echo '<p class="description" style="color: #dc3232;"><strong>' . \esc_html__('Warning:', 'szamlazz-hu-fluentcart') . '</strong> ' . \esc_html__('No tax rates found. Please configure tax rates in FluentCart first.', 'szamlazz-hu-fluentcart') . '</p>';
+            } elseif (count($current_rates) === 1 && $current_rates[0] == $selected_vat) {
+                echo '<p class="description" style="color: #46b450;">' . \esc_html__('All tax rates are already set to', 'szamlazz-hu-fluentcart') . ' ' . \esc_html($selected_vat) . '%</p>';
+            } else {
+                echo '<p class="description">' . \esc_html__('Current shipping VAT rates in use:', 'szamlazz-hu-fluentcart') . ' ' . \esc_html(\implode(', ', $current_rates)) . '%</p>';
+            }
+        },
+        'szamlazz-hu-fluentcart',
+        'szamlazz_hu_shipping_section'
+    );
+    
 });
 
 /**

@@ -39,14 +39,6 @@ msgid "What is this?"
 msgstr ""
 
 #: szamlazz-hu-fluentcart.php
-msgid "Shipping VAT Settings"
-msgstr ""
-
-#: szamlazz-hu-fluentcart.php
-msgid "Configure the VAT rate for shipping."
-msgstr ""
-
-#: szamlazz-hu-fluentcart.php
 msgid "Shipping VAT Rate"
 msgstr ""
 
