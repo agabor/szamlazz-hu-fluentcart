@@ -389,7 +389,7 @@ function get_pdf_path($invoice_number) {
             echo '</select>';
         },
         'szamlazz-hu-fluentcart',
-        'szamlazz_hu_shipping_section'
+        'szamlazz_hu_invoice_section'
     );
     
     \add_settings_field(
@@ -408,7 +408,7 @@ function get_pdf_path($invoice_number) {
             }
         },
         'szamlazz-hu-fluentcart',
-        'szamlazz_hu_shipping_section'
+        'szamlazz_hu_invoice_section'
     );
     
 });
